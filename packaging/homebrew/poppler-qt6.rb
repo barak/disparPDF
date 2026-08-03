@@ -6,6 +6,10 @@ class PopplerQt6 < Formula
   sha256 "4cb4e5a3dc8cb5eec751c8a23c8ba19f61f96dedc0cd07d2aee6b0c8e2cf6ba4"
   license any_of: ["GPL-2.0-only", "GPL-3.0-only"]
 
+  # ソースのバージョンは変わらないが keg の作り方を変えたため、
+  # 既存の環境でも `brew upgrade` で作り直されるように revision を上げる
+  revision 1
+
   patch do
     url "https://gitlab.freedesktop.org/poppler/poppler/-/commit/e263f50b8ecac8aaad458a4c45d8ca9761dd8878.diff"
     sha256 "b61ff6d4a474503f00bdd96a0bf60ee245adc9e23b77bba2096da47da182513a"
