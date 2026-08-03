@@ -76,28 +76,46 @@ class PopplerQt6 < Formula
     end
 
     # ── ライブラリ ───────────────────────────────────────────────────────
+    # libpoppler-qt6 と、それがリンクしている libpoppler 本体の両方を keg に入れる。
+    #
+    # 以前は Homebrew の poppler formula の dylib を参照するよう書き換えていたが、
+    # poppler は ABI 安定性を保証しておらず soname (libpoppler.NNN.dylib) が
+    # バージョンごとに変わる。そのため poppler が更新されるたびに参照先が消え、
+    # 「Library not loaded: .../libpoppler.161.dylib」で起動できなくなっていた。
+    # ここでは同じソースツリーからビルドした libpoppler を keg 内に同梱し、
+    # Homebrew の poppler のバージョンから独立させる。
     lib.install Dir["build/qt6/src/libpoppler-qt6*"]
 
-    # ── libpoppler-qt6 が @rpath で参照する libpoppler を
-    #    Homebrew の poppler 本体の絶対パスに書き換える。
-    #    同時に poppler 本体の dylib へのシンボリックリンクを lib/ に作成し、
-    #    macOS の dyld が rpath 解決時にこのフォーミュラの lib/ を見つけられるようにする。
-    poppler_lib = poppler_prefix/"lib"
-    Dir["#{poppler_lib}/libpoppler.*.dylib"].each do |src|
-      ln_sf src, lib/File.basename(src)
+    core_dylibs = Dir["#{buildpath}/build/libpoppler.*.dylib"]
+    core_dylibs = Dir["#{buildpath}/build/**/libpoppler.*.dylib"] if core_dylibs.empty?
+    odie "libpoppler dylib not found in the build tree" if core_dylibs.empty?
+    lib.install core_dylibs
+
+    # 同梱した libpoppler の install name を keg 内の絶対パスにする
+    Dir["#{lib}/libpoppler.*.dylib"].each do |core_dylib|
+      next if File.symlink?(core_dylib)
+
+      MachO::Tools.change_dylib_id(core_dylib, "#{lib}/#{File.basename(core_dylib)}")
+      # 変更後に再署名（macOS 26以降はコード署名の変更を検出するため必須）
+      system "codesign", "--force", "--sign", "-", core_dylib
     end
 
+    # libpoppler-qt6 の @rpath 参照を、同梱した libpoppler の絶対パスへ書き換える。
+    # soname は poppler のバージョンごとに変わるため決め打ちせず、
+    # 実際のロードコマンドから読み取る。
     Dir["#{lib}/libpoppler-qt6.*.*.*.dylib"].each do |qt6_dylib|
-      MachO::Tools.change_install_name(
-        qt6_dylib,
-        "@rpath/libpoppler.161.dylib",
-        "#{poppler_lib}/libpoppler.161.dylib"
-      )
-      # 変更後に再署名（macOS 26以降はコード署名の変更を検出するため必須）
+      refs = MachO::MachOFile.new(qt6_dylib).linked_dylibs
+      refs.grep(%r{\A@rpath/libpoppler\.[0-9.]+\.dylib\z}).each do |ref|
+        MachO::Tools.change_install_name(qt6_dylib, ref, "#{lib}/#{File.basename(ref)}")
+      end
       system "codesign", "--force", "--sign", "-", qt6_dylib
     end
 
     # ── pkg-config ───────────────────────────────────────────────────────
+    # Qt6 バインディングのヘッダは自己完結しており poppler 本体の
+    # ヘッダを必要としないため、Requires: poppler は付けない。
+    # （付けると Homebrew の poppler の libpoppler も一緒にリンクされ、
+    #   同梱したものと二重にロードされてしまう）
     (lib/"pkgconfig/poppler-qt6.pc").write <<~PC
       prefix=#{prefix}
       exec_prefix=${prefix}
@@ -106,10 +124,9 @@ class PopplerQt6 < Formula
 
       Name: poppler-qt6
       Description: Qt6 bindings for poppler
-      Version: 26.06.0
-      Requires: poppler
+      Version: #{version}
       Libs: -L${libdir} -lpoppler-qt6
-      Cflags: -I${includedir}/poppler/qt6 -I#{poppler_prefix}/include/poppler
+      Cflags: -I${includedir}/poppler/qt6
     PC
   end
 
