@@ -1,3 +1,15 @@
 build/
 *.qm
 confrontapdf-qt6.patch
+
+# ファイル操作前のバックアップ置き場
+backup/
+
+# qmake が生成する成果物
+Makefile
+.qmake.stash
+*.pro.user
+
+# lupdate / lrelease がリポジトリ直下に残すランダム名のプロジェクト記述ファイル
+# (例: HfUhTd.json) — 6文字の英字のみという命名規則に合わせている
+/[A-Za-z][A-Za-z][A-Za-z][A-Za-z][A-Za-z][A-Za-z].json
