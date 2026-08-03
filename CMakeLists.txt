@@ -8,6 +8,56 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC OFF)
 
+# ---- Homebrew (macOS): keg-only な依存を自動で探索パスへ追加 ----
+# qt@6 / poppler-qt6 などは keg-only なので、既定の CMAKE_PREFIX_PATH や
+# pkg-config の既定パスからは見つからない。ここで自動的に前置しておくことで、
+# 環境変数を設定しなくても `cmake -B build` だけでビルドできるようにする。
+# また Intel 版 Homebrew (/usr/local) の古い .pc が残っている環境では、
+# アーキテクチャ違いのライブラリを掴んでしまうため、必ず先頭に追加する。
+function(disparpdf_prepend_brew_prefix _formula)
+    if(NOT HOMEBREW_PREFIX)
+        return()
+    endif()
+    set(_opt "${HOMEBREW_PREFIX}/opt/${_formula}")
+    if(NOT IS_DIRECTORY "${_opt}")
+        return()
+    endif()
+    # CMAKE_PREFIX_PATH には後ろから追加する（ユーザー指定を優先させるため）
+    set(_paths ${CMAKE_PREFIX_PATH})
+    list(APPEND _paths "${_opt}")
+    set(CMAKE_PREFIX_PATH "${_paths}" PARENT_SCOPE)
+    # PKG_CONFIG_PATH は先頭に置く（/usr/local の古い .pc に勝たせるため）
+    if(IS_DIRECTORY "${_opt}/lib/pkgconfig")
+        set(ENV{PKG_CONFIG_PATH} "${_opt}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+    endif()
+endfunction()
+
+if(APPLE)
+    find_program(BREW_EXECUTABLE brew)
+    if(BREW_EXECUTABLE)
+        execute_process(COMMAND "${BREW_EXECUTABLE}" --prefix
+            OUTPUT_VARIABLE HOMEBREW_PREFIX
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    if(HOMEBREW_PREFIX)
+        message(STATUS "Homebrew prefix: ${HOMEBREW_PREFIX}")
+        # 各 formula は互いに異なる .pc を提供するため相互の順序は問わない。
+        # 重要なのは、いずれもが pkg-config の既定パスより前に来ること。
+        # qt@5 / poppler-qt5 は Qt6 が無い環境向けの保険。
+        foreach(_f poppler-qt6 poppler qt@6 qt qt@5 poppler-qt5)
+            disparpdf_prepend_brew_prefix(${_f})
+        endforeach()
+        # PATH 上の pkg-config が Intel 版 Homebrew (/usr/local) のものだと、
+        # 探索パスが x86_64 側に固定され依存解決に失敗する。Homebrew の
+        # pkgconf があればそちらを優先する。
+        if(NOT PKG_CONFIG_EXECUTABLE AND EXISTS "${HOMEBREW_PREFIX}/bin/pkg-config")
+            set(PKG_CONFIG_EXECUTABLE "${HOMEBREW_PREFIX}/bin/pkg-config"
+                CACHE FILEPATH "pkg-config executable")
+        endif()
+    endif()
+endif()
+
 # ---- Qt (prefer Qt6, fall back to Qt5) ----
 find_package(Qt6 QUIET COMPONENTS Core Gui Widgets PrintSupport Xml LinguistTools)
 if(Qt6_FOUND)
@@ -63,11 +113,18 @@ if(NOT POPPLER_TARGET)
         set(_POPPLER_LIBNAME poppler-qt5)
         set(_POPPLER_HEADER  poppler-qt5.h)
     endif()
+    # keg-only な Homebrew formula は <prefix>/lib 直下に無いので opt/<formula> も見る
+    set(_POPPLER_HINTS ${CMAKE_PREFIX_PATH} /opt/homebrew /usr/local /usr)
+    if(HOMEBREW_PREFIX)
+        list(APPEND _POPPLER_HINTS
+            "${HOMEBREW_PREFIX}/opt/${_POPPLER_LIBNAME}"
+            "${HOMEBREW_PREFIX}/opt/poppler")
+    endif()
     find_library(POPPLER_QT_LIB NAMES ${_POPPLER_LIBNAME}
-        HINTS ${CMAKE_PREFIX_PATH} /opt/homebrew /usr/local /usr
+        HINTS ${_POPPLER_HINTS}
         PATH_SUFFIXES lib lib64)
     find_path(POPPLER_QT_INCLUDE NAMES ${_POPPLER_HEADER}
-        HINTS ${CMAKE_PREFIX_PATH} /opt/homebrew /usr/local /usr
+        HINTS ${_POPPLER_HINTS}
         PATH_SUFFIXES include include/poppler/qt6 include/poppler/qt5 include/poppler)
     if(POPPLER_QT_LIB AND POPPLER_QT_INCLUDE)
         add_library(poppler_qt_manual INTERFACE IMPORTED)
@@ -83,11 +140,14 @@ endif()
 
 # pkg-config からバージョンを取得して POPPLER_VERSION マクロとして渡す
 # (poppler-version.h は poppler-global.h を必要とするためインクルード不可)
-if(PKG_CONFIG_FOUND)
-    if(QT_VERSION_MAJOR EQUAL 6)
-        pkg_get_variable(POPPLER_VERSION_STR poppler-qt6 Version)
-    else()
-        pkg_get_variable(POPPLER_VERSION_STR poppler-qt5 Version)
+# Version は .pc の「変数」ではなくフィールドなので pkg_get_variable では取れない。
+# pkg_check_modules が設定する <PREFIX>_VERSION を使う。
+if(POPPLER_QT_VERSION)
+    set(POPPLER_VERSION_STR "${POPPLER_QT_VERSION}")
+elseif(PKG_CONFIG_FOUND)
+    pkg_check_modules(_POPPLER_VER QUIET poppler-qt${QT_VERSION_MAJOR})
+    if(_POPPLER_VER_VERSION)
+        set(POPPLER_VERSION_STR "${_POPPLER_VER_VERSION}")
     endif()
 endif()
 if(NOT POPPLER_VERSION_STR)

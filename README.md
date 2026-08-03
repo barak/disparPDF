@@ -95,12 +95,20 @@ brew install yuw/disparPDF/poppler-qt6
 
 ### Build
 
+On macOS, CMake locates Homebrew's keg-only `qt@6` and `poppler-qt6` automatically,
+so no environment variables are needed:
+
 ```sh
-export PKG_CONFIG_PATH="/opt/homebrew/opt/poppler-qt6/lib/pkgconfig"
-cmake -B build \
-  -DCMAKE_PREFIX_PATH="/opt/homebrew/opt/qt@6" \
-  -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(sysctl -n hw.logicalcpu)
+```
+
+To use a Qt or Poppler installation elsewhere, pass it explicitly — an
+explicit `CMAKE_PREFIX_PATH` takes precedence over the auto-detected paths:
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="/path/to/qt6;/path/to/poppler-qt6"
 ```
 
 ### Install
