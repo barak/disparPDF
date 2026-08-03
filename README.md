@@ -25,12 +25,19 @@ brew trust yuw/disparPDF
 brew install yuw/disparPDF/disparPDF
 ```
 
-After installation, copy to `/Applications` manually (requires admin privileges):
+The `disparPDF` and `disparPDFc` commands work right away. To also have the
+app in `/Applications` (for Finder, Dock and Spotlight), copy it there yourself:
 
 ```sh
-cp -r /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
 ```
+
+macOS does not allow Homebrew to write into an existing app bundle in
+`/Applications` (App Management protection), so **repeat this command after
+every `brew upgrade`** — otherwise the Finder copy stays on the old version.
+Use `ditto`, not `cp -r`: with an existing bundle `cp -r` nests the new copy
+inside the old one instead of replacing it. `ditto` preserves the code
+signature, so no re-signing is needed.
 
 After installation:
 
@@ -63,8 +70,7 @@ sudo rm -rf /usr/local/disparPDF.app
 sudo rm -rf /Applications/disparPDF.app
 
 # 4. Copy to /Applications
-cp -r /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
 
 # 5. Verify
 open /Applications/disparPDF.app
@@ -120,9 +126,9 @@ sudo cmake --install build --prefix /usr/local
 # Re-sign after install (required on macOS 26+)
 codesign --force --sign - /usr/local/disparPDF.app/Contents/MacOS/disparPDF
 
-# Optional: copy to /Applications
-cp -r /usr/local/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+# Optional: copy to /Applications (ditto replaces an existing bundle and
+# keeps the signature; cp -r would nest the new copy inside the old one)
+ditto /usr/local/disparPDF.app /Applications/disparPDF.app
 
 # Optional: add symlink for CLI use
 sudo ln -sf /usr/local/disparPDF.app/Contents/MacOS/disparPDF /usr/local/bin/disparPDF

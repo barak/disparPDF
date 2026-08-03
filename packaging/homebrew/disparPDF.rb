@@ -53,21 +53,27 @@ class Disparpdf < Formula
     # install_name_tool による変更後に再署名（macOS 26以降で必須）
     system "codesign", "--force", "--sign", "-",
            "#{prefix}/disparPDF.app/Contents/MacOS/disparPDF"
-
-    # /Applications にもコピー
-    apps_dir = Pathname.new("/Applications")
-    if apps_dir.exist? && apps_dir.writable?
-      system "cp", "-r", "#{prefix}/disparPDF.app", "/Applications/disparPDF.app"
-      system "codesign", "--force", "--sign", "-",
-             "/Applications/disparPDF.app/Contents/MacOS/disparPDF"
-    end
   end
 
+  # 以前はここで /Applications へコピーしていたが、macOS 13 以降の TCC
+  # (App Management) により、自分がインストールしたのではない /Applications 内の
+  # .app バンドルは brew から書き換えられない ("Operation not permitted")。
+  # 無言でスキップされ GUI だけ旧バージョンのまま残るため、手順を caveats に移した。
   def caveats
     <<~EOS
       disparPDF.app has been installed to:
         #{opt_prefix}/disparPDF.app
-        /Applications/disparPDF.app (if /Applications is writable)
+
+      The `disparPDF` command always launches the copy above, so it is
+      up to date immediately after every `brew upgrade`.
+
+      To also have it in /Applications (for Finder, Dock and Spotlight),
+      copy it there yourself. macOS does not let Homebrew do this, so the
+      command has to be repeated after each upgrade:
+
+        ditto #{opt_prefix}/disparPDF.app /Applications/disparPDF.app
+
+      ditto preserves the code signature, so no re-signing is needed.
 
       CLI commands available:
         disparPDF   — launch GUI with optional file arguments

@@ -22,12 +22,20 @@ brew trust yuw/disparPDF
 brew install yuw/disparPDF/disparPDF
 ```
 
-インストール後、`/Applications` へのコピーを手動で行います：
+`disparPDF` / `disparPDFc` コマンドはこの時点で使えます。Finder・Dock・Spotlight
+から使えるよう `/Applications` にも置く場合は、手動でコピーします：
 
 ```sh
-cp -r /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
 ```
+
+macOS の App Management 保護により、`/Applications` にある既存の .app バンドルを
+Homebrew から書き換えることはできません。そのため **`brew upgrade` のたびに上の
+コマンドを実行してください**（しないと Finder 側だけ旧バージョンのまま残ります）。
+
+`cp -r` ではなく `ditto` を使ってください。既存バンドルがある状態で `cp -r` を使うと、
+置き換えではなく古いバンドルの中に入れ子でコピーされてしまいます。`ditto` は
+コード署名を保持するため、再署名は不要です。
 
 インストール後の配置：
 
@@ -60,8 +68,7 @@ sudo rm -rf /usr/local/disparPDF.app
 sudo rm -rf /Applications/disparPDF.app
 
 # 4. /Applications にコピー
-cp -r /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
 
 # 5. 動作確認
 open /Applications/disparPDF.app
@@ -118,8 +125,9 @@ sudo cmake --install build --prefix /usr/local
 codesign --force --sign - /usr/local/disparPDF.app/Contents/MacOS/disparPDF
 
 # /Applications にコピー（任意）
-cp -r /usr/local/disparPDF.app /Applications/
-codesign --force --sign - /Applications/disparPDF.app/Contents/MacOS/disparPDF
+# ditto は既存バンドルを置き換え、署名も保持する
+# （cp -r だと古いバンドルの中に入れ子でコピーされてしまう）
+ditto /usr/local/disparPDF.app /Applications/disparPDF.app
 
 # CLIから呼び出せるようにシンボリックリンクを作成（任意）
 sudo ln -sf /usr/local/disparPDF.app/Contents/MacOS/disparPDF /usr/local/bin/disparPDF
