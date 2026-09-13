@@ -48,6 +48,39 @@ After installation:
 | `/opt/homebrew/bin/disparPDF` | CLI wrapper (launches GUI) |
 | `/opt/homebrew/bin/disparPDFc` | CLI batch mode |
 
+## Upgrading
+
+```sh
+brew update
+brew upgrade yuw/disparPDF/poppler-qt6 yuw/disparPDF/disparPDF
+```
+
+The `disparPDF` and `disparPDFc` commands are current as soon as this finishes.
+
+**If only `poppler-qt6` was upgraded**, rebuild disparPDF against the new
+bindings. Homebrew does not rebuild a formula when one of its dependencies is
+updated, so the binary would keep running against the previous Poppler:
+
+```sh
+brew reinstall yuw/disparPDF/disparPDF
+```
+
+**If you keep a copy in `/Applications`**, refresh it after every upgrade.
+macOS does not allow Homebrew to write into an existing app bundle there, so
+this step cannot be automated:
+
+```sh
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
+```
+
+To check what is installed, and to reclaim the disk space held by the
+superseded versions:
+
+```sh
+brew list --versions disparPDF poppler-qt6
+brew cleanup
+```
+
 ## Migrating from manual install to Homebrew tap
 
 If you have previously built and installed disparPDF manually, follow these steps:

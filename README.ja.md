@@ -46,6 +46,38 @@ Homebrew から書き換えることはできません。そのため **`brew up
 | `/opt/homebrew/bin/disparPDF` | CLIラッパー（GUIを起動） |
 | `/opt/homebrew/bin/disparPDFc` | CLIバッチモード |
 
+## アップグレード
+
+```sh
+brew update
+brew upgrade yuw/disparPDF/poppler-qt6 yuw/disparPDF/disparPDF
+```
+
+`disparPDF` / `disparPDFc`コマンドはこれだけで最新になります．
+
+**`poppler-qt6`だけが更新された場合**は，新しいバインディングに対してビルドし直してください．
+Homebrewは依存先が更新されただけではformulaを再ビルドしないため，そのままでは
+古いPopplerに対してリンクされたバイナリが使われ続けます：
+
+```sh
+brew reinstall yuw/disparPDF/disparPDF
+```
+
+**`/Applications`にコピーを置いている場合**は，アップグレードのたびに更新してください．
+macOSは`/Applications`にある既存の.appバンドルへのHomebrewからの書き込みを許可しないため，
+この手順は自動化できません：
+
+```sh
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
+```
+
+インストール状況の確認と，入れ替わって不要になった旧バージョンの削除：
+
+```sh
+brew list --versions disparPDF poppler-qt6
+brew cleanup
+```
+
 ## 手動インストールからHomebrewへの移行
 
 手動でビルド・インストールした環境からHomebrewに移行する手順です。
