@@ -2,18 +2,14 @@ class PopplerQt6 < Formula
   desc "Qt6 bindings for the Poppler PDF rendering library"
   homepage "https://poppler.freedesktop.org/"
 
-  url "https://poppler.freedesktop.org/poppler-26.06.0.tar.xz"
-  sha256 "4cb4e5a3dc8cb5eec751c8a23c8ba19f61f96dedc0cd07d2aee6b0c8e2cf6ba4"
+  # keg が libpoppler を同梱するようになったため Homebrew の poppler とは独立だが、
+  # PDF 解析エンジンが古いまま取り残されないよう poppler formula に合わせて上げる
+  url "https://poppler.freedesktop.org/poppler-26.09.0.tar.xz"
+  sha256 "8059eadb6805340768f138c465b57f8164c92b4a0773c37ef031ea6c0d987b2e"
   license any_of: ["GPL-2.0-only", "GPL-3.0-only"]
 
-  # ソースのバージョンは変わらないが keg の作り方を変えたため、
-  # 既存の環境でも `brew upgrade` で作り直されるように revision を上げる
-  revision 1
-
-  patch do
-    url "https://gitlab.freedesktop.org/poppler/poppler/-/commit/e263f50b8ecac8aaad458a4c45d8ca9761dd8878.diff"
-    sha256 "b61ff6d4a474503f00bdd96a0bf60ee245adc9e23b77bba2096da47da182513a"
-  end
+  # 以前は glib バインディングの mutex 初期化パッチを当てていたが、
+  # このformulaは -DENABLE_GLIB=OFF でビルドしており一行も効いていなかったため削除した。
 
   depends_on "cmake"   => :build
   depends_on "pkgconf" => :build
