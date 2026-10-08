@@ -1,0 +1,438 @@
+From: "Barak A. Pearlmutter" <barak+git@pearlmutter.net>
+Date: Thu, 8 Oct 2026 11:32:22 +0100
+Subject: disparPDFc: a link to disparPDF, instead of a second build of it
+
+disparPDF and disparPDFc were built from the same sources, differing
+only in COMPARA_IS_CONSOLE, which put disparPDFc always in batch mode.
+In ConfrontaPDF's qmake build it was also a Windows console program
+and not a macOS bundle, but the CMake build kept only the second; and
+the only thing it is needed for is a plain executable that scripts on
+macOS can run, since the disparPDF command Homebrew installs launches
+the bundle with "open", which passes back neither the output nor the
+exit status.
+
+So build the program once, and have it decide from the name it was run
+by (argv[0], ignoring case and .exe; applicationFilePath() would
+resolve the link) whether to be disparPDFc.  disparPDFc is installed as
+a symbolic link to disparPDF, or on macOS to the program in the bundle,
+or on Windows as a copy; the build directory has one too, for the tests
+and the manual page, which are unchanged.  The Homebrew formula links
+bin/disparPDFc to the program in the bundle, which runs it directly,
+and its test runs disparPDFc --version (not tried on macOS).
+
+New tests: disparPDFc compares in batch mode without -b, also when run
+by a link named DisparPDFC.exe.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DFo7ywK1YasqiQ8A3v7kVX
+---
+ CMakeLists.txt                  |  68 +++++++++++++++++-------
+ README.ja.md                    |   4 ++
+ README.md                       |   5 ++
+ aboutform.cpp                   |   4 --
+ main.cpp                        | 112 ++++++++++++++++++++--------------------
+ packaging/homebrew/disparPDF.rb |   7 ++-
+ test/CMakeLists.txt             |  17 ++++--
+ 7 files changed, 134 insertions(+), 83 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 099de41..7380662 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -215,7 +215,7 @@ set(COMMON_HEADERS
+     utils.h
+ )
+ 
+-# ---- GUI executable ----
++# ---- The program ----
+ add_executable(disparPDF
+     main.cpp
+     ${COMMON_SOURCES}
+@@ -225,21 +225,30 @@ target_compile_definitions(disparPDF PRIVATE POPPLER_VERSION="${POPPLER_VERSION_
+     DISPARPDF_VERSION="${PROJECT_VERSION}")
+ target_link_libraries(disparPDF PRIVATE ${QT_LIBS} ${POPPLER_TARGET})
+ 
+-# ---- Console-only executable ----
+-add_executable(disparPDFc
+-    main.cpp
+-    ${COMMON_SOURCES}
+-    ${COMMON_HEADERS}
+-)
+-target_compile_definitions(disparPDFc PRIVATE COMPARA_IS_CONSOLE POPPLER_VERSION="${POPPLER_VERSION_STR}"
+-    DISPARPDF_VERSION="${PROJECT_VERSION}")
+-target_link_libraries(disparPDFc PRIVATE ${QT_LIBS} ${POPPLER_TARGET})
+-
+ if(APPLE)
+     set_target_properties(disparPDF PROPERTIES MACOSX_BUNDLE TRUE)
+ endif()
+ 
+-# ---- Tests (see test/CMakeLists.txt); they run disparPDFc, so are not
++# ---- disparPDFc ----
++# Run by the name disparPDFc, disparPDF is always in batch mode (see
++# main.cpp).  So disparPDFc is a symbolic link to it or, on Windows, a
++# copy; this makes one in the build directory, for the tests and the
++# manual page, whose path is DISPARPDFC.
++if(WIN32)
++    set(DISPARPDFC ${CMAKE_CURRENT_BINARY_DIR}/disparPDFc.exe)
++    add_custom_command(TARGET disparPDF POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different
++                $<TARGET_FILE:disparPDF> ${DISPARPDFC}
++        VERBATIM)
++else()
++    set(DISPARPDFC ${CMAKE_CURRENT_BINARY_DIR}/disparPDFc)
++    add_custom_command(TARGET disparPDF POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E create_symlink
++                $<TARGET_FILE:disparPDF> ${DISPARPDFC}
++        VERBATIM)
++endif()
++
++# ---- Tests (see test/CMakeLists.txt); they run the program, so are not
+ # built when cross compiling ----
+ option(BUILD_TESTING "Build the tests" ON)
+ if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
+@@ -249,10 +258,28 @@ endif()
+ 
+ # ---- Install ----
+ include(GNUInstallDirs)
+-install(TARGETS disparPDF disparPDFc
++install(TARGETS disparPDF
+     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+     BUNDLE  DESTINATION .
+ )
++# disparPDFc: a copy on Windows, otherwise a relative symbolic link, to
++# the program in the bundle on macOS
++if(WIN32)
++    install(PROGRAMS $<TARGET_FILE:disparPDF>
++            DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME disparPDFc.exe)
++else()
++    if(APPLE)
++        set(_target ../disparPDF.app/Contents/MacOS/disparPDF)
++    else()
++        set(_target disparPDF)
++    endif()
++    install(CODE "
++        set(_dir \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\")
++        message(STATUS \"Installing: \${_dir}/disparPDFc -> ${_target}\")
++        file(MAKE_DIRECTORY \"\${_dir}\")
++        file(CREATE_LINK ${_target} \"\${_dir}/disparPDFc\" SYMBOLIC)
++    ")
++endif()
+ install(FILES README.md CHANGES DESTINATION ${CMAKE_INSTALL_DOCDIR})
+ 
+ # The desktop file and icon, for the menus of Linux and BSD desktops
+@@ -280,9 +307,9 @@ foreach(_prog disparPDF disparPDFc)
+ endforeach()
+ install(FILES completions/_disparPDF DESTINATION ${ZSH_COMPLETION_DIR})
+ 
+-# The manual pages are generated by help2man from the programs' --help
+-# and --version (which need no display) plus doc_man/*.h2m.  That runs
+-# the programs, so when cross compiling, or without help2man, the copies
++# The manual pages are generated by help2man from the program's --help
++# and --version (which need no display), run as disparPDF and as
++# disparPDFc, plus doc_man/*.h2m.  That runs the program, so when cross compiling, or without help2man, the copies
+ # of the generated pages kept in doc_man are installed instead.  After
+ # changing the options or the .h2m files, refresh those copies with
+ # "cmake --build build --target update-manpages" and commit them.
+@@ -294,11 +321,16 @@ foreach(_prog disparPDF disparPDFc)
+     if(HELP2MAN_EXECUTABLE AND NOT CMAKE_CROSSCOMPILING)
+         set(_page ${CMAKE_CURRENT_BINARY_DIR}/${_prog}.1)
+         set(_h2m ${CMAKE_CURRENT_SOURCE_DIR}/doc_man/${_prog}.h2m)
++        if(_prog STREQUAL disparPDFc)
++            set(_run ${DISPARPDFC})
++        else()
++            set(_run $<TARGET_FILE:disparPDF>)
++        endif()
+         add_custom_command(
+             OUTPUT ${_page}
+             COMMAND ${HELP2MAN_EXECUTABLE} --no-info --include=${_h2m}
+-                    --output=${_page} $<TARGET_FILE:${_prog}>
+-            DEPENDS ${_prog} ${_h2m}
++                    --output=${_page} ${_run}
++            DEPENDS disparPDF ${_h2m}
+             COMMENT "Generating the ${_prog} manual page with help2man"
+             VERBATIM)
+         list(APPEND MANPAGE_COPIES
+diff --git a/README.ja.md b/README.ja.md
+index eac1054..d18980d 100644
+--- a/README.ja.md
++++ b/README.ja.md
+@@ -189,6 +189,10 @@ disparPDFc -b --outType=1 a.pdf b.pdf
+ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
++`disparPDFc`は別のプログラムではなく，`disparPDF`へのシンボリックリンク
++（Windowsではそのコピー）です．この名前で起動すると常にバッチモードになるので
++`-b`は省略でき，ディスプレイも不要です．`disparPDF -b`でも同じです．
++
+ ## 設定
+ 
+ GUIはユーザーごとに設定を保存します．macOSでは
+diff --git a/README.md b/README.md
+index bb12522..45bc26b 100644
+--- a/README.md
++++ b/README.md
+@@ -212,6 +212,11 @@ disparPDFc -b --outType=1 a.pdf b.pdf
+ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
++`disparPDFc` is not a separate program but a symbolic link to `disparPDF`
++(on Windows, a copy of it): run by that name, it is always in batch mode,
++so `-b` is optional, and it needs no display.  `disparPDF -b` does the
++same.
++
+ ## Settings
+ 
+ The GUI keeps its settings per user, on macOS in
+diff --git a/aboutform.cpp b/aboutform.cpp
+index 6c813d3..811002a 100644
+--- a/aboutform.cpp
++++ b/aboutform.cpp
+@@ -24,11 +24,7 @@
+ 
+ // From project() in CMakeLists.txt
+ const QString AboutForm::Version(DISPARPDF_VERSION);
+-#ifdef COMPARA_IS_CONSOLE
+ const QString AboutForm::ProgramName("disparPDF");
+-#else
+-const QString AboutForm::ProgramName("disparPDF");
+-#endif
+ 
+ AboutForm::AboutForm(QWidget *parent) : QDialog(parent)
+ {
+diff --git a/main.cpp b/main.cpp
+index 0969a85..a4b3ea4 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -12,6 +12,7 @@
+ 
+ #include "mainwindow.hpp"
+ #include <QApplication>
++#include <QFileInfo>
+ #include <QIcon>
+ #include <QLibraryInfo>
+ #include <QLocale>
+@@ -22,22 +23,27 @@
+ #include "batchcompare.h"
+ #include "commandlinemanager.h"
+ 
+-// The name of this program, for --help and --version
+-#ifdef COMPARA_IS_CONSOLE
+-static const char CommandName[] = "disparPDFc";
+-#else
+-static const char CommandName[] = "disparPDF";
+-#endif
++// Run as disparPDFc (e.g., through a link to disparPDF, or a copy of it,
++// with that name), the program is always in batch mode.  The name it was
++// run by is taken from argv[0]: QCoreApplication::applicationFilePath()
++// resolves symbolic links, so would always give disparPDF.
++static bool runAsConsole(const char *argv0)
++{
++    QString name = QFileInfo(QString::fromLocal8Bit(argv0)).fileName();
++    if (name.endsWith(".exe", Qt::CaseInsensitive))
++        name.chop(4);
++    return name.compare("disparPDFc", Qt::CaseInsensitive) == 0;
++}
+ 
+ int main(int argc, char *argv[])
+ {
++    const bool console = argc > 0 && runAsConsole(argv[0]);
++    // The name of this program, for --help and --version
++    const char *const CommandName = console ? "disparPDFc" : "disparPDF";
+     StartupParameters startupParameters;
+     // Batch mode and --help show no window, so they should work without a
+     // display: use Qt's offscreen platform for them unless one was chosen
+-    bool noWindow = false;
+-#ifdef COMPARA_IS_CONSOLE
+-    noWindow = true;
+-#endif
++    bool noWindow = console;
+     bool platformGiven = !qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+     for (int i = 1; i < argc; ++i) {
+         const QByteArray arg(argv[i]);
+@@ -78,9 +84,8 @@ int main(int argc, char *argv[])
+     QStringList errors;
+     QStringList fileArguments;
+ 
+-#ifdef  COMPARA_IS_CONSOLE
+-    startupParameters.setIsBatch(true);
+-#endif
++    if (console)
++        startupParameters.setIsBatch(true);
+     for (const QString &arg : std::as_const(args)) {
+         if (optionsOK && (arg == "--appearance" || arg == "-a")) {
+             comparisonMode = CompareAppearance;
+@@ -103,37 +108,35 @@ int main(int argc, char *argv[])
+         }
+         else if (optionsOK && (arg == "--help" || arg == "-h")) {
+             // GNU style, which help2man turns into the manual pages
+-#ifdef COMPARA_IS_CONSOLE
+-            out << "Usage: " << CommandName << " [OPTION]... FILE1 FILE2\n"
+-                "Compare two PDF files without a window, and print the "
+-                "result code\n(see below).\n";
+-#else
+-            out << "Usage: " << CommandName << " [OPTION]... [FILE1 [FILE2]]\n"
+-                "  or:  " << CommandName << " --batch [OPTION]... FILE1 FILE2\n"
+-                "Compare two PDF files and show their differences.\n"
+-                "\n"
+-                "The files are optional and are normally chosen in the "
+-                "window.  With --batch,\nthey are compared without a "
+-                "window, and the result code (see below) is\nprinted.\n";
+-#endif
+-            out << "\n"
+-                "Options:\n"
+-#ifdef COMPARA_IS_CONSOLE
+-                "  -a, --appearance       compare the appearance of the "
+-                "pages (the default)\n"
+-                "  -c, --characters       compare the text character by "
+-                "character\n"
+-                "  -w, --words            compare the text word by word\n"
+-#else
+-                "  -a, --appearance       compare the appearance of the "
+-                "pages (the default in\n"
+-                "                           batch mode)\n"
+-                "  -c, --characters       compare the text character by "
+-                "character\n"
+-                "  -w, --words            compare the text word by word "
+-                "(the default otherwise)\n"
+-#endif
+-                "      --any-extension    accept files whose names do "
++            if (console)
++                out << "Usage: " << CommandName << " [OPTION]... FILE1 FILE2\n"
++                    "Compare two PDF files without a window, and print the "
++                    "result code\n(see below).\n"
++                    "\n"
++                    "Options:\n"
++                    "  -a, --appearance       compare the appearance of the "
++                    "pages (the default)\n"
++                    "  -c, --characters       compare the text character by "
++                    "character\n"
++                    "  -w, --words            compare the text word by word\n";
++            else
++                out << "Usage: " << CommandName << " [OPTION]... [FILE1 [FILE2]]\n"
++                    "  or:  " << CommandName << " --batch [OPTION]... FILE1 FILE2\n"
++                    "Compare two PDF files and show their differences.\n"
++                    "\n"
++                    "The files are optional and are normally chosen in the "
++                    "window.  With --batch,\nthey are compared without a "
++                    "window, and the result code (see below) is\nprinted.\n"
++                    "\n"
++                    "Options:\n"
++                    "  -a, --appearance       compare the appearance of the "
++                    "pages (the default in\n"
++                    "                           batch mode)\n"
++                    "  -c, --characters       compare the text character by "
++                    "character\n"
++                    "  -w, --words            compare the text word by word "
++                    "(the default otherwise)\n";
++            out << "      --any-extension    accept files whose names do "
+                 "not end in .pdf\n"
+                 "      --language=LANG    use the given translation "
+                 "language, e.g., en for\n"
+@@ -151,11 +154,10 @@ int main(int argc, char *argv[])
+                 "      --version          output version information and "
+                 "exit\n"
+                 "\n"
+-                "Batch mode options:\n"
+-#ifndef COMPARA_IS_CONSOLE
+-                "  -b, --batch            compare without a window\n"
+-#endif
+-                "      --outType=0        print only the result code "
++                "Batch mode options:\n";
++            if (!console)
++                out << "  -b, --batch            compare without a window\n";
++            out << "      --outType=0        print only the result code "
+                 "(the default)\n"
+                 "      --outType=1        print the result code and a "
+                 "description\n"
+@@ -189,13 +191,11 @@ int main(int argc, char *argv[])
+                 "  -3, -4  FILE1 or FILE2 cannot be read\n"
+                 "  -5  a page cannot be read\n"
+                 "  -6, -7  the --pdfdiff or --xmlResult file cannot be "
+-                "written\n"
+-#ifndef COMPARA_IS_CONSOLE
+-                "\n"
+-                "In the window, press F1 for the full documentation, and "
+-                "click About for the\ncopyright and license details.\n"
+-#endif
+-                ;
++                "written\n";
++            if (!console)
++                out << "\n"
++                    "In the window, press F1 for the full documentation, and "
++                    "click About for the\ncopyright and license details.\n";
+             return 0;
+         }
+         else if (optionsOK && (arg == "--debug" || arg == "--debug=1" ||
+diff --git a/packaging/homebrew/disparPDF.rb b/packaging/homebrew/disparPDF.rb
+index 6c5d306..4d2ad86 100644
+--- a/packaging/homebrew/disparPDF.rb
++++ b/packaging/homebrew/disparPDF.rb
+@@ -30,8 +30,10 @@ class Disparpdf < Formula
+     # GUI アプリ
+     prefix.install "build/disparPDF.app"
+ 
+-    # CLI バイナリ
+-    bin.install "build/disparPDFc"
++    # CLI: .app 内の本体へのシンボリックリンク。disparPDFc という名前で
++    # 起動すると常にバッチモードになる（main.cpp）。open を経由しないので
++    # 標準出力と終了ステータスがそのまま返る
++    bin.install_symlink prefix/"disparPDF.app/Contents/MacOS/disparPDF" => "disparPDFc"
+ 
+     # GUI を bin からも呼び出せるようにラッパースクリプトを作成
+     # 引数を絶対パスに変換してから渡す（相対パスだと cannot load エラーになる）
+@@ -84,5 +86,6 @@ class Disparpdf < Formula
+   test do
+     assert_predicate prefix/"disparPDF.app", :exist?
+     assert_predicate bin/"disparPDFc", :exist?
++    assert_match "disparPDFc", shell_output("#{bin}/disparPDFc --version")
+   end
+ end
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index 81282aa..4f27e38 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -5,7 +5,7 @@ add_test(NAME batch-legacy
+          COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/testbase.sh
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+ set_tests_properties(batch-legacy PROPERTIES ENVIRONMENT
+-    "diffcmd=$<TARGET_FILE:disparPDFc>;QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config")
++    "diffcmd=${DISPARPDFC};QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config")
+ 
+ # The others run disparPDFc on the PDFs in data/ (see data/README) and
+ # check the result code it prints and how many pages of differences it
+@@ -18,7 +18,7 @@ set(DATA ${CMAKE_CURRENT_SOURCE_DIR}/data)
+ # disparpdf_test(NAME RESULT PAGES [OPTION]... -- [ARGUMENT]...)
+ function(disparpdf_test name result pages)
+     add_test(NAME ${name}
+-             COMMAND runtest $<TARGET_FILE:disparPDFc> ${result} ${pages}
++             COMMAND runtest ${DISPARPDFC} ${result} ${pages}
+                      ${ARGN})
+ endfunction()
+ 
+@@ -129,6 +129,17 @@ add_test(NAME gui-program-help
+          COMMAND runtest $<TARGET_FILE:disparPDF> - - --stdout
+                  "Usage: disparPDF " -- --help)
+ 
++# Run by the name disparPDFc, the program is in batch mode without -b,
++# whatever the case of the name and with or without .exe
++add_test(NAME console-by-name
++         COMMAND ${DISPARPDFC} --words ${DATA}/base.pdf ${DATA}/word.pdf)
++add_test(NAME console-by-name-case
++         COMMAND sh -c "dir=$(mktemp -d) && ln -s \"$1\" \"$dir/DisparPDFC.exe\" && \"$dir/DisparPDFC.exe\" --words \"$2\" \"$3\"; status=$?; rm -r \"$dir\"; exit $status"
++                 sh $<TARGET_FILE:disparPDF> ${DATA}/base.pdf ${DATA}/word.pdf)
++set_tests_properties(console-by-name console-by-name-case PROPERTIES
++    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config"
++    PASS_REGULAR_EXPRESSION "(^|\n)1\n" TIMEOUT 120)
++
+ disparpdf_test(help - - --stdout "Usage: disparPDFc" -- --help)
+ disparpdf_test(version - - --stdout "disparPDFc ${PROJECT_VERSION}" -- --version)
+ 
+@@ -141,7 +152,7 @@ add_test(NAME completion-options
+                  ${CMAKE_SOURCE_DIR}/completions/_disparPDF)
+ add_test(NAME completion-options-c
+          COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/completion-options.sh
+-                 $<TARGET_FILE:disparPDFc>
++                 ${DISPARPDFC}
+                  ${CMAKE_SOURCE_DIR}/completions/disparPDF.bash
+                  ${CMAKE_SOURCE_DIR}/completions/_disparPDF)
+ add_test(NAME completion-bash

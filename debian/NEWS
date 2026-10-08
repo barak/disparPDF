@@ -1,0 +1,21 @@
+diffpdf (1:1.0.6-1) unstable; urgency=medium
+
+  DiffPDF has been replaced by disparPDF, a maintained fork of it (by way
+  of ConfrontaPDF), now in the package disparpdf; the diffpdf package
+  only pulls that in, and can be removed.  For now "diffpdf" still runs
+  disparPDF (and "man diffpdf" shows its manual page), but use
+  "disparPDF" instead.
+
+  The window, comparison modes, and -a, -c, -w and --language work as
+  before.  The differences, for scripts and settings:
+
+   - --save-and-quit[=FILE] is gone.  Use
+       disparPDF --batch --pdfdiff=FILE FILE1 FILE2
+     or disparPDFc, which is always in batch mode.  It prints a result
+     code, which is also the exit status: 0 the same, 1 different, 2
+     different numbers of pages, and others as listed by --help;
+     appearance is compared unless -c or -w is given.
+   - Settings are now kept in ~/.config/disparPDF/disparPDF.conf, and
+     those in ~/.config/DiffPDF/ are not carried over.
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Thu, 08 Oct 2026 12:23:50 +0100

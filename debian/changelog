@@ -1,3 +1,33 @@
+diffpdf (1:1.0.6-1) unstable; urgency=medium
+
+  * Swizzle to the disparPDF upstream fork (a Qt 6 port of ConfrontaPDF,
+    itself a fork of DiffPDF), with its own version numbers, hence the
+    epoch. Update Homepage, watch file (GitHub, disparPDF's v* tags),
+    upstream metadata, copyright and README.source; add NEWS for users.
+  * New disparpdf package, which Provides: diffpdf, with diffpdf links to
+    the disparPDF command and manual page (hence Breaks and Replaces
+    older diffpdf); diffpdf becomes an empty transitional package
+    depending on it.
+  * Quilt patches for ported-over materials and fixes and features, from
+    the disparpdf-fixes-and-features branch offered upstream: the Poppler
+    colour-profile race, batch mode needing no display, translations,
+    word order, fingerprinting pages once, page offset, a ctest test
+    suite, --version, comparing files not named *.pdf, sharing the
+    rendering code between GUI and batch mode, deterministic
+    highlighting, GNU-style --help, a help2man manual page, desktop file
+    and icons (with the scalable icon moved there from debian/), bash and
+    zsh completion, and disparPDFc as a link to disparPDF that
+    --interactive turns back into it.
+    - The test PDFs are kept in debian/test-data, as quilt patches cannot
+      add binary files.
+  * Build: drop dh-sequence-single-binary and extra-cmake-modules; add
+    pkgconf and help2man; install zsh completion in vendor-completions;
+    install help.html (with doc-base).
+  * Drop the lintian overrides, which were for DiffPDF's translations.
+  * gbp.conf: unquote upstream-tag, which gbp took literally.
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Thu, 08 Oct 2026 12:23:50 +0100
+
 diffpdf (2.1.3.1-4) unstable; urgency=medium
 
   * Fix regressions from the port to new-style signal/slot connections:

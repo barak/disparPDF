@@ -1,0 +1,11 @@
+debian/test-data/base.pdf
+debian/test-data/bold.pdf
+debian/test-data/box.pdf
+debian/test-data/inserted.pdf
+debian/test-data/marginbox.pdf
+debian/test-data/reflow.pdf
+debian/test-data/reordered.pdf
+debian/test-data/rewritten-gs.pdf
+debian/test-data/rewritten-original.pdf
+debian/test-data/same.pdf
+debian/test-data/word.pdf

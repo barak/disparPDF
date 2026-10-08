@@ -1,0 +1,49 @@
+From: "Barak A. Pearlmutter" <barak+git@pearlmutter.net>
+Date: Wed, 7 Oct 2026 16:29:13 +0100
+Subject: Fix: batch mode and --help need no display
+
+disparPDFc, and disparPDF with -b or --help, show no window, but the
+QApplication was created first and so aborted without a display
+("could not connect to display ... no Qt platform plugin could be
+initialized"), which makes batch mode unusable on servers and in
+automated tests.
+
+Before creating the QApplication, select Qt's offscreen platform for
+them, unless QT_QPA_PLATFORM or -platform chooses one.  The GUI is
+unaffected.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DFo7ywK1YasqiQ8A3v7kVX
+---
+ main.cpp | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/main.cpp b/main.cpp
+index 0d38160..05a96ac 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -25,6 +25,24 @@
+ int main(int argc, char *argv[])
+ {
+     StartupParameters startupParameters;
++    // Batch mode and --help show no window, so they should work without a
++    // display: use Qt's offscreen platform for them unless one was chosen
++    bool noWindow = false;
++#ifdef COMPARA_IS_CONSOLE
++    noWindow = true;
++#endif
++    bool platformGiven = !qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
++    for (int i = 1; i < argc; ++i) {
++        const QByteArray arg(argv[i]);
++        if (arg == "--")
++            break;
++        if (arg == "-b" || arg == "--batch" || arg == "-h" || arg == "--help")
++            noWindow = true;
++        if (arg == "-platform" || arg.startsWith("-platform="))
++            platformGiven = true;
++    }
++    if (noWindow && !platformGiven)
++        qputenv("QT_QPA_PLATFORM", "offscreen");
+     QApplication app(argc, argv);
+ #ifdef Q_OS_MACOS
+     app.setCursorFlashTime(0);

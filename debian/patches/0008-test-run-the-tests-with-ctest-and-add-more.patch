@@ -1,0 +1,465 @@
+From: "Barak A. Pearlmutter" <barak+git@pearlmutter.net>
+Date: Wed, 7 Oct 2026 16:38:07 +0100
+Subject: test: run the tests with ctest, and add more
+
+CTest now runs the tests (ctest --test-dir build); they need no display
+and take a few seconds.  BUILD_TESTING (default ON) controls them, and
+they are left out when cross compiling, since they run disparPDFc.
+
+- batch-legacy runs the existing test/testbase.sh, which still passes.
+- 24 new tests run disparPDFc on small PDFs in test/data (see its
+  README) and check the result code it prints and how many pages of
+  differences it saves (test/runtest.cpp; settings such as margins and
+  zoom are passed with --settings).  They cover identical content, a
+  changed word, reflowed text, lines drawn in a different order, a page
+  before and after rewriting with Ghostscript, a line drawn twice, boxes
+  inside and outside a top margin at zoom 100% and 200%, an inserted
+  page with --startPage1/--startPage2, and --help.
+
+The PDFs were made by test/data/make-test-pdfs.sh (with fonts embedded,
+so testing needs no Ghostscript or fonts), except the rewritten page,
+which is from a technical report by Barak A. Pearlmutter, contributed
+under GPL-2+.
+
+Against the code before this series (7680a57) exactly five of the new
+tests fail, one for each of the fixes since: bold-appearance
+(antialiasing), margins-zoom200-box (margin region at other zooms),
+inserted-start-pages (--startPage2), and rewritten-characters and
+rewritten-words (word order).
+
+[Debian: the test PDFs are left out of this patch, as quilt patches
+cannot hold binary files; debian/rules copies them in from
+debian/test-data.]
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DFo7ywK1YasqiQ8A3v7kVX
+---
+ CMakeLists.txt              |   8 +++
+ README.md                   |  11 ++++
+ test/CMakeLists.txt         |  84 +++++++++++++++++++++++++++++
+ test/data/README            |  19 +++++++
+ test/data/make-test-pdfs.sh | 122 ++++++++++++++++++++++++++++++++++++++++++
+ test/runtest.cpp            | 127 ++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 371 insertions(+)
+ create mode 100644 test/CMakeLists.txt
+ create mode 100644 test/data/README
+ create mode 100755 test/data/make-test-pdfs.sh
+ create mode 100644 test/runtest.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 10ed261..50f01dd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -267,6 +267,14 @@ if(APPLE)
+     set_target_properties(disparPDF PROPERTIES MACOSX_BUNDLE TRUE)
+ endif()
+ 
++# ---- Tests (see test/CMakeLists.txt); they run disparPDFc, so are not
++# built when cross compiling ----
++option(BUILD_TESTING "Build the tests" ON)
++if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
++    enable_testing()
++    add_subdirectory(test)
++endif()
++
+ install(TARGETS disparPDF disparPDFc
+     RUNTIME DESTINATION bin
+     BUNDLE  DESTINATION .
+diff --git a/README.md b/README.md
+index 974163f..f4e224f 100644
+--- a/README.md
++++ b/README.md
+@@ -150,6 +150,17 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
+   -DCMAKE_PREFIX_PATH="/path/to/qt6;/path/to/poppler-qt6"
+ ```
+ 
++### Test
++
++The tests run the batch mode on small PDFs and need no display:
++
++```sh
++ctest --test-dir build
++```
++
++They are described in `test/CMakeLists.txt`; configure with
++`-DBUILD_TESTING=OFF` to leave them out.
++
+ ### Install
+ 
+ ```sh
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+new file mode 100644
+index 0000000..de9aeef
+--- /dev/null
++++ b/test/CMakeLists.txt
+@@ -0,0 +1,84 @@
++# Tests, run with "ctest" in the build directory.  They need no display.
++
++# The original batch-mode tests (testbase.sh, using ../data)
++add_test(NAME batch-legacy
++         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/testbase.sh
++         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
++set_tests_properties(batch-legacy PROPERTIES ENVIRONMENT
++    "diffcmd=$<TARGET_FILE:disparPDFc>;QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config")
++
++# The others run disparPDFc on the PDFs in data/ (see data/README) and
++# check the result code it prints and how many pages of differences it
++# saves (see runtest.cpp)
++add_executable(runtest runtest.cpp)
++target_link_libraries(runtest PRIVATE ${QT_LIBS} ${POPPLER_TARGET})
++
++set(DATA ${CMAKE_CURRENT_SOURCE_DIR}/data)
++
++# disparpdf_test(NAME RESULT PAGES [OPTION]... -- [ARGUMENT]...)
++function(disparpdf_test name result pages)
++    add_test(NAME ${name}
++             COMMAND runtest $<TARGET_FILE:disparPDFc> ${result} ${pages}
++                     ${ARGN})
++endfunction()
++
++# Identical content
++foreach(mode appearance characters words)
++    disparpdf_test(identical-${mode} 0 0 -- --${mode}
++                   ${DATA}/base.pdf ${DATA}/same.pdf)
++endforeach()
++
++# One word changed, on page 2
++foreach(mode appearance characters words)
++    disparpdf_test(word-${mode} 1 1 -- --${mode}
++                   ${DATA}/base.pdf ${DATA}/word.pdf)
++endforeach()
++
++# Same words, broken into lines differently: only the appearance differs
++disparpdf_test(reflow-words 0 0 -- --words
++               ${DATA}/base.pdf ${DATA}/reflow.pdf)
++disparpdf_test(reflow-appearance 1 1 -- --appearance
++               ${DATA}/base.pdf ${DATA}/reflow.pdf)
++
++# Same lines in the same places, drawn in a different order
++disparpdf_test(reordered-words 0 0 -- --words
++               ${DATA}/base.pdf ${DATA}/reordered.pdf)
++disparpdf_test(reordered-appearance 0 0 -- --appearance
++               ${DATA}/base.pdf ${DATA}/reordered.pdf)
++
++# The same page before and after rewriting it with Ghostscript, which
++# changes Poppler's word order
++foreach(mode characters words)
++    disparpdf_test(rewritten-${mode} 0 0 -- --${mode}
++                   ${DATA}/rewritten-original.pdf ${DATA}/rewritten-gs.pdf)
++endforeach()
++
++# A line drawn twice looks bolder
++disparpdf_test(bold-words 0 0 -- --words ${DATA}/base.pdf ${DATA}/bold.pdf)
++disparpdf_test(bold-appearance 1 1 -- --appearance
++               ${DATA}/base.pdf ${DATA}/bold.pdf)
++
++# A box 1.5in from the top of page 1, and one 0.25in from the top
++disparpdf_test(box-words 0 0 -- --words ${DATA}/base.pdf ${DATA}/box.pdf)
++disparpdf_test(box-appearance 1 1 -- --appearance
++               ${DATA}/base.pdf ${DATA}/box.pdf)
++disparpdf_test(marginbox-appearance 1 1 -- --appearance
++               ${DATA}/base.pdf ${DATA}/marginbox.pdf)
++
++# Excluding a 1in top margin hides only the box inside it, at any zoom
++foreach(zoom 100 200)
++    set(margins --setting Margins/Exclude=true --setting Margins/Top=72
++                --setting Zoom=${zoom})
++    disparpdf_test(margins-zoom${zoom}-box 1 1 ${margins} -- --appearance
++                   ${DATA}/base.pdf ${DATA}/box.pdf)
++    disparpdf_test(margins-zoom${zoom}-marginbox 0 0 ${margins} --
++                   --appearance ${DATA}/base.pdf ${DATA}/marginbox.pdf)
++endforeach()
++
++# A page inserted after page 1: the page counts differ, but pages 2-3
++# match pages 3-4
++disparpdf_test(inserted 2 - -- --words ${DATA}/base.pdf ${DATA}/inserted.pdf)
++disparpdf_test(inserted-start-pages 0 0 -- --words --startPage1=2
++               --startPage2=3 --pages=2 ${DATA}/base.pdf ${DATA}/inserted.pdf)
++
++disparpdf_test(help - - --stdout "usage: disparPDF" -- --help)
+diff --git a/test/data/README b/test/data/README
+new file mode 100644
+index 0000000..bb2a35c
+--- /dev/null
++++ b/test/data/README
+@@ -0,0 +1,19 @@
++Test PDFs for the CTest tests (see ../CMakeLists.txt); ../../data has more.
++
++base.pdf, same.pdf, word.pdf, reflow.pdf, reordered.pdf, bold.pdf,
++box.pdf, marginbox.pdf, inserted.pdf
++    Generated by make-test-pdfs.sh, which describes how each differs from
++    base.pdf.  Part of disparPDF, under the GPL version 2 or later.
++
++rewritten-original.pdf, rewritten-gs.pdf
++    Page 58 of Barak A. Pearlmutter, "An Investigation of the Gradient
++    Descent Process in Neural Networks", technical report CMU-CS-96-114,
++    Carnegie Mellon University, 1996: as published (PDF 1.4), and after
++    rewriting it as PDF 1.7 with Ghostscript 10.08:
++        gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.7 -dNOPAUSE -dQUIET \
++           -dBATCH -sOutputFile=rewritten.pdf CMU-CS-96-114.pdf
++    (each then cut down to page 58 with qpdf).  Rewriting moves the text
++    by a few thousandths of a point, which changes the order in which
++    Poppler extracts some words although the words and their places are
++    the same.  Contributed by the author, Barak A. Pearlmutter, under the
++    GPL version 2 or later.
+diff --git a/test/data/make-test-pdfs.sh b/test/data/make-test-pdfs.sh
+new file mode 100755
+index 0000000..515a8d0
+--- /dev/null
++++ b/test/data/make-test-pdfs.sh
+@@ -0,0 +1,122 @@
++#!/bin/sh
++# Regenerates the test PDFs in this directory.  They are kept in the
++# repository, so building and testing disparPDF does not need this script
++# or Ghostscript; it records how they were made.
++#
++# Each file differs from base.pdf (3 pages of text) in one way:
++#   same.pdf       nothing (regenerated, so not byte-identical)
++#   word.pdf       one word on page 2
++#   reflow.pdf     page 1's words broken into lines differently
++#   reordered.pdf  page 1's lines drawn in reverse order, in the same places
++#   bold.pdf       one line of page 1 drawn twice, so it looks bolder
++#   box.pdf        a small box on page 1, 1.5in from the top
++#   marginbox.pdf  a small box on page 1, 0.25in from the top (in a 1in margin)
++#   inserted.pdf   an extra page between pages 1 and 2
++#
++# (The other files here are described in README.)
++#
++# Requires ps2pdf (Ghostscript).
++set -e
++cd "$(dirname "$0")"
++
++header() {
++    echo '%!PS'
++    echo '<< /PageSize [612 792] >> setpagedevice'
++    echo '/Helvetica findfont 12 scalefont setfont'
++}
++
++# line PAGE K: the text of line K of page PAGE
++line() {
++    echo "Page $1, line $2: the quick brown fox jumps over the lazy dog."
++}
++
++# show Y TEXT
++show() {
++    echo "72 $1 moveto ($2) show"
++}
++
++# page PAGE [VARIANT]
++page() {
++    k=1
++    while [ $k -le 20 ]; do
++        text=$(line "$1" $k)
++        if [ "$2" = word ] && [ $k -eq 10 ]; then
++            text=$(echo "$text" | sed 's/fox/cat/')
++        fi
++        show $((700 - 15 * (k - 1))) "$text"
++        if [ "$2" = bold ] && [ $k -eq 3 ]; then
++            show $((700 - 15 * (k - 1))) "$text"
++        fi
++        k=$((k + 1))
++    done
++    case "$2" in
++        box) echo '500 664 20 20 rectfill' ;;
++        marginbox) echo '500 756 20 20 rectfill' ;;
++    esac
++    echo showpage
++}
++
++# Page 1's lines, last first, in the same places
++reordered_page() {
++    k=20
++    while [ $k -ge 1 ]; do
++        show $((700 - 15 * (k - 1))) "$(line 1 $k)"
++        k=$((k - 1))
++    done
++    echo showpage
++}
++
++# Page 1's words, six to a line
++reflowed_page() {
++    k=1
++    words=""
++    while [ $k -le 20 ]; do
++        words="$words $(line 1 $k)"
++        k=$((k + 1))
++    done
++    echo $words | xargs -n 6 echo | {
++        y=700
++        while read -r text; do
++            show $y "$text"
++            y=$((y - 15))
++        done
++    }
++    echo showpage
++}
++
++inserted_page() {
++    k=1
++    while [ $k -le 20 ]; do
++        show $((700 - 15 * (k - 1))) "An inserted page, line $k."
++        k=$((k + 1))
++    done
++    echo showpage
++}
++
++generate() {
++    name=$1
++    shift
++    { header; "$@"; } > "$name.ps"
++    # Embed all fonts, so rendering does not depend on installed fonts
++    ps2pdf -dPDFSETTINGS=/prepress "$name.ps" "$name.pdf"
++    rm "$name.ps"
++}
++
++base_pages() { page 1; page 2; page 3; }
++word_pages() { page 1; page 2 word; page 3; }
++reflow_pages() { reflowed_page; page 2; page 3; }
++reordered_pages() { reordered_page; page 2; page 3; }
++bold_pages() { page 1 bold; page 2; page 3; }
++box_pages() { page 1 box; page 2; page 3; }
++marginbox_pages() { page 1 marginbox; page 2; page 3; }
++inserted_pages() { page 1; inserted_page; page 2; page 3; }
++
++generate base base_pages
++generate same base_pages
++generate word word_pages
++generate reflow reflow_pages
++generate reordered reordered_pages
++generate bold bold_pages
++generate box box_pages
++generate marginbox marginbox_pages
++generate inserted inserted_pages
+diff --git a/test/runtest.cpp b/test/runtest.cpp
+new file mode 100644
+index 0000000..aee905e
+--- /dev/null
++++ b/test/runtest.cpp
+@@ -0,0 +1,127 @@
++/*
++    This program or module is free software: you can redistribute it
++    and/or modify it under the terms of the GNU General Public License
++    as published by the Free Software Foundation, either version 2 of
++    the License, or (at your option) any later version. This program is
++    distributed in the hope that it will be useful, but WITHOUT ANY
++    WARRANTY; without even the implied warranty of MERCHANTABILITY or
++    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
++    for more details.
++*/
++
++// Runs one disparPDFc test:
++//
++//   runtest DISPARPDFC RESULT PAGES [OPTION]... -- [ARGUMENT]...
++//
++// runs "DISPARPDFC -b --outType=0 --pdfdiff=OUT ARGUMENT..." with no
++// display, and checks that the result code it prints is RESULT (e.g., 0
++// same, 1 different, 2 different page counts; "-" to skip) and, unless
++// PAGES is "-", that it saved PAGES pages of differences to OUT (0
++// meaning no file at all).  Options:
++//   --setting KEY=VALUE   pass a settings file with KEY=VALUE in it
++//   --stdout TEXT         check that standard output contains TEXT
++
++#include <poppler-qt6.h>
++#include <QCoreApplication>
++#include <QFile>
++#include <QProcess>
++#include <QSettings>
++#include <QTemporaryDir>
++#include <QTextStream>
++
++static QTextStream err(stderr);
++
++static int fail(const QString &message)
++{
++    err << "FAIL: " << message << "\n";
++    return 1;
++}
++
++int main(int argc, char *argv[])
++{
++    QCoreApplication app(argc, argv);
++    QStringList args = app.arguments().mid(1);
++    if (args.count() < 4 || !args.contains("--")) {
++        err << "usage: runtest DISPARPDFC RESULT PAGES [OPTION]... -- "
++               "[ARGUMENT]...\n";
++        return 2;
++    }
++    const QString program = args.takeFirst();
++    const QString expectedResult = args.takeFirst();
++    const QString expectedPages = args.takeFirst();
++
++    QTemporaryDir dir;
++    if (!dir.isValid())
++        return fail("cannot create a temporary directory");
++    const QString settingsFile = dir.filePath("settings.ini");
++    bool haveSettings = false;
++    QString expectedOutput;
++    while (!args.isEmpty() && args.first() != "--") {
++        const QString option = args.takeFirst();
++        if (args.isEmpty() || args.first() == "--")
++            return fail("missing value for " + option);
++        const QString value = args.takeFirst();
++        if (option == "--setting") {
++            const int equals = value.indexOf('=');
++            QSettings settings(settingsFile, QSettings::IniFormat);
++            settings.setValue(value.left(equals), value.mid(equals + 1));
++            haveSettings = true;
++        }
++        else if (option == "--stdout")
++            expectedOutput = value;
++        else
++            return fail("unknown option " + option);
++    }
++    args.removeFirst(); // "--"
++
++    const QString output = dir.filePath("diff.pdf");
++    QStringList arguments;
++    arguments << "-b" << "--outType=0" << "--pdfdiff=" + output;
++    if (haveSettings)
++        arguments << "--settings=" + settingsFile;
++    arguments << args;
++    QProcess process;
++    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
++    // No display: batch mode must manage without one
++    environment.remove("DISPLAY");
++    environment.remove("WAYLAND_DISPLAY");
++    environment.remove("QT_QPA_PLATFORM");
++    environment.insert("HOME", dir.path());
++    environment.insert("XDG_CONFIG_HOME", dir.filePath("config"));
++    process.setProcessEnvironment(environment);
++    process.start(program, arguments);
++    if (!process.waitForFinished(300000))
++        return fail("disparPDFc did not finish: " + process.errorString());
++    const QString standardOutput = QString::fromLocal8Bit(
++            process.readAllStandardOutput());
++    const QString standardError = QString::fromLocal8Bit(
++            process.readAllStandardError());
++    if (!standardError.isEmpty())
++        err << "disparPDFc's standard error:\n" << standardError;
++
++    if (process.exitStatus() != QProcess::NormalExit)
++        return fail("disparPDFc crashed");
++    const QString result = standardOutput.section('\n', 0, 0).trimmed();
++    if (expectedResult != "-" && result != expectedResult)
++        return fail(QString("result %1, expected %2").arg(result)
++                    .arg(expectedResult));
++    if (!expectedOutput.isEmpty() &&
++        !standardOutput.contains(expectedOutput))
++        return fail("standard output does not contain '" +
++                    expectedOutput + "':\n" + standardOutput);
++    if (expectedPages != "-") {
++        int pages = 0;
++        if (QFile::exists(output)) {
++            std::unique_ptr<Poppler::Document> pdf =
++                    Poppler::Document::load(output);
++            if (!pdf)
++                return fail("cannot read the saved differences");
++            pages = pdf->numPages();
++        }
++        if (pages != expectedPages.toInt())
++            return fail(QString("%1 pages of differences saved, "
++                                "expected %2").arg(pages)
++                        .arg(expectedPages));
++    }
++    return 0;
++}

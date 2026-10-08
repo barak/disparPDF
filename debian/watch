@@ -1,3 +1,7 @@
 Version: 5
-Template: GitLab
-Dist: https://gitlab.com/eang/@PACKAGE@
+
+Template: GitHub
+Owner: yuw
+Project: disparPDF
+# Only disparPDF's tags (v1.0.1, ...), not ConfrontaPDF's (1.0.0, 1.1)
+Matching-Pattern: https://api.github.com/repos/[^/]+/[^/]+/git/refs/tags/v(\d[\d.]*)

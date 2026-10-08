@@ -1,0 +1,274 @@
+From: "Barak A. Pearlmutter" <barak+git@pearlmutter.net>
+Date: Thu, 8 Oct 2026 11:43:30 +0100
+Subject: --interactive, so disparPDFc can show the window
+
+For symmetry with --batch: disparPDFc --interactive is disparPDF.  When
+both are given, the last one wins, as with GNU-style options.  Listed
+in --help (and so the manual page) and offered by the completions.
+
+Tests: disparPDFc --interactive shows the window and keeps running
+(until timeout(1) stops it; skipped without timeout), and disparPDFc
+--interactive --batch is in batch mode.  Both fail if --interactive is
+not recognized.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DFo7ywK1YasqiQ8A3v7kVX
+---
+ README.ja.md               |  3 ++-
+ README.md                  |  6 +++---
+ completions/_disparPDF     | 10 +++++++---
+ completions/disparPDF.bash |  4 ++--
+ doc_man/disparPDF.1        | 10 +++++++---
+ doc_man/disparPDF.h2m      |  7 ++++---
+ main.cpp                   | 24 +++++++++++++++++-------
+ startupparameters.cpp      |  3 +++
+ test/CMakeLists.txt        | 20 +++++++++++++++++++-
+ test/completion-bash.sh    |  2 ++
+ test/completion-zsh.sh     |  2 ++
+ 11 files changed, 68 insertions(+), 23 deletions(-)
+
+diff --git a/README.ja.md b/README.ja.md
+index d18980d..2aa0b59 100644
+--- a/README.ja.md
++++ b/README.ja.md
+@@ -190,8 +190,9 @@ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
+ `disparPDFc`は別のプログラムではなく，`disparPDF`へのシンボリックリンク
+-（Windowsではそのコピー）です．この名前で起動すると常にバッチモードになるので
++（Windowsではそのコピー）です．この名前で起動するとバッチモードになるので
+ `-b`は省略でき，ディスプレイも不要です．`disparPDF -b`でも同じです．
++`disparPDFc --interactive`では`disparPDF`と同様にウィンドウを表示します．
+ 
+ ## 設定
+ 
+diff --git a/README.md b/README.md
+index 06f1c88..661d403 100644
+--- a/README.md
++++ b/README.md
+@@ -213,9 +213,9 @@ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
+ `disparPDFc` is not a separate program but a symbolic link to `disparPDF`
+-(on Windows, a copy of it): run by that name, it is always in batch mode,
+-so `-b` is optional, and it needs no display.  `disparPDF -b` does the
+-same.
++(on Windows, a copy of it): run by that name, it is in batch mode, so
++`-b` is optional, and it needs no display.  `disparPDF -b` does the
++same, and `disparPDFc --interactive` shows the window, as `disparPDF` does.
+ 
+ ## Settings
+ 
+diff --git a/completions/_disparPDF b/completions/_disparPDF
+index f10988e..9d0f250 100644
+--- a/completions/_disparPDF
++++ b/completions/_disparPDF
+@@ -7,9 +7,13 @@ local file=$pdf
+ (( ${words[(I)--any-extension]} )) && file=_files
+ 
+ local -a batch
+-# disparPDFc is always in batch mode
+-[[ $service == disparPDFc ]] ||
+-  batch=('(-b --batch)'{-b,--batch}'[compare without a window]')
++# disparPDFc is in batch mode unless given --interactive
++if [[ $service == disparPDFc ]]; then
++  batch=('--interactive[show the window, as disparPDF does]')
++else
++  batch=('(-b --batch --interactive)'{-b,--batch}'[compare without a window]'
++         '(-b --batch --interactive)--interactive[show the window (the default)]')
++fi
+ 
+ _arguments -s -S \
+   '(-a --appearance -c --characters -w --words)'{-a,--appearance}'[compare the appearance of the pages]' \
+diff --git a/completions/disparPDF.bash b/completions/disparPDF.bash
+index 5346bd9..fbe1096 100644
+--- a/completions/disparPDF.bash
++++ b/completions/disparPDF.bash
+@@ -57,8 +57,8 @@ _disparPDF()
+                 --any-extension --language= --debug=2 --debug=3
+                 --outType=0 --outType=1 --pages= --startPage1= --startPage2=
+                 --pdfdiff= --xmlResult= --key= --settings= --compareFonts
+-                -h --help --version --'
+-            # disparPDFc is always in batch mode
++                --interactive -h --help --version --'
++            # disparPDFc is in batch mode unless given --interactive
+             [[ ${words[0]##*/} == disparPDFc ]] || opts+=' -b --batch'
+             COMPREPLY=($(compgen -W "$opts" -- "$cur"))
+             [[ ${COMPREPLY-} == *= ]] && compopt -o nospace
+diff --git a/doc_man/disparPDF.1 b/doc_man/disparPDF.1
+index c54067d..0f928ee 100644
+--- a/doc_man/disparPDF.1
++++ b/doc_man/disparPDF.1
+@@ -43,9 +43,10 @@ in the same format as the configuration file (see
+ .B disparPDFc
+ is a link to
+ .BR disparPDF ,
+-which, run by that name, is always in batch mode, so
+-.B \-\-batch
+-can be left out.
++which, run by that name, is in batch mode without
++.BR \-\-batch ,
++and shows the window only when given
++.BR \-\-interactive .
+ .SH OPTIONS
+ .TP
+ \fB\-a\fR, \fB\-\-appearance\fR
+@@ -84,6 +85,9 @@ output version information and exit
+ \fB\-b\fR, \fB\-\-batch\fR
+ compare without a window
+ .TP
++\fB\-\-interactive\fR
++show the window (the default, except as disparPDFc)
++.TP
+ \fB\-\-outType\fR=\fI\,0\/\fR
+ print only the result code (the default)
+ .TP
+diff --git a/doc_man/disparPDF.h2m b/doc_man/disparPDF.h2m
+index 55de21d..f200aed 100644
+--- a/doc_man/disparPDF.h2m
++++ b/doc_man/disparPDF.h2m
+@@ -32,9 +32,10 @@ in the same format as the configuration file (see
+ .B disparPDFc
+ is a link to
+ .BR disparPDF ,
+-which, run by that name, is always in batch mode, so
+-.B \-\-batch
+-can be left out.
++which, run by that name, is in batch mode without
++.BR \-\-batch ,
++and shows the window only when given
++.BR \-\-interactive .
+ 
+ [EXAMPLES]
+ Compare the words of two files:
+diff --git a/main.cpp b/main.cpp
+index 6d18a76..fd8231a 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -43,19 +43,24 @@ int main(int argc, char *argv[])
+     StartupParameters startupParameters;
+     // Batch mode and --help show no window, so they should work without a
+     // display: use Qt's offscreen platform for them unless one was chosen
+-    bool noWindow = console;
++    // (the last of --batch and --interactive wins)
++    bool batch = console;
++    bool helpOrVersion = false;
+     bool platformGiven = !qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+     for (int i = 1; i < argc; ++i) {
+         const QByteArray arg(argv[i]);
+         if (arg == "--")
+             break;
+-        if (arg == "-b" || arg == "--batch" || arg == "-h" ||
+-            arg == "--help" || arg == "--version")
+-            noWindow = true;
++        if (arg == "-b" || arg == "--batch")
++            batch = true;
++        else if (arg == "--interactive")
++            batch = false;
++        else if (arg == "-h" || arg == "--help" || arg == "--version")
++            helpOrVersion = true;
+         if (arg == "-platform" || arg.startsWith("-platform="))
+             platformGiven = true;
+     }
+-    if (noWindow && !platformGiven)
++    if ((batch || helpOrVersion) && !platformGiven)
+         qputenv("QT_QPA_PLATFORM", "offscreen");
+     QApplication app(argc, argv);
+ #ifdef Q_OS_MACOS
+@@ -156,8 +161,13 @@ int main(int argc, char *argv[])
+                 "exit\n"
+                 "\n"
+                 "Batch mode options:\n";
+-            if (!console)
+-                out << "  -b, --batch            compare without a window\n";
++            if (console)
++                out << "      --interactive      show the window, as "
++                    "disparPDF does\n";
++            else
++                out << "  -b, --batch            compare without a window\n"
++                    "      --interactive      show the window (the default, "
++                    "except as disparPDFc)\n";
+             out << "      --outType=0        print only the result code "
+                 "(the default)\n"
+                 "      --outType=1        print the result code and a "
+diff --git a/startupparameters.cpp b/startupparameters.cpp
+index ffa7967..391e646 100644
+--- a/startupparameters.cpp
++++ b/startupparameters.cpp
+@@ -35,6 +35,7 @@ StartupParameters::~StartupParameters()
+ 
+ const QString StartupParameters::BatchExtended = "--batch" ;
+ const QString StartupParameters::Batch = "-b" ;
++static const QString Interactive = "--interactive";
+ static const QString OutType = "--outType=" ;
+ static const QString Pages = "--pages=" ;
+ static const QString StartPage1 = "--startPage1=";
+@@ -51,6 +52,8 @@ bool StartupParameters::parseArgument(const QString &arg, Status *status)
+     bool error = false ;
+     if( ( arg == BatchExtended) || (arg == Batch) ) {
+         _isBatch = true ;
++    } else if( arg == Interactive ) {
++        _isBatch = false ;
+     } else if( arg.startsWith(OutType)) {
+         _returnType = Utils::validateReturnType(arg.mid(OutType.length()), _returnType, &error);
+         status->setParamError(error, OutType);
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index 4f27e38..3d0ce4b 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -136,10 +136,28 @@ add_test(NAME console-by-name
+ add_test(NAME console-by-name-case
+          COMMAND sh -c "dir=$(mktemp -d) && ln -s \"$1\" \"$dir/DisparPDFC.exe\" && \"$dir/DisparPDFC.exe\" --words \"$2\" \"$3\"; status=$?; rm -r \"$dir\"; exit $status"
+                  sh $<TARGET_FILE:disparPDF> ${DATA}/base.pdf ${DATA}/word.pdf)
+-set_tests_properties(console-by-name console-by-name-case PROPERTIES
++# ... unless given --interactive, though the last of that and --batch wins
++add_test(NAME console-interactive-batch
++         COMMAND ${DISPARPDFC} --interactive --batch --words
++                 ${DATA}/base.pdf ${DATA}/word.pdf)
++set_tests_properties(console-by-name console-by-name-case
++                     console-interactive-batch PROPERTIES
+     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config"
+     PASS_REGULAR_EXPRESSION "(^|\n)1\n" TIMEOUT 120)
+ 
++# With --interactive it shows the window (on Qt's offscreen platform, here)
++# and keeps running, until timeout(1) stops it, instead of printing the
++# result and exiting
++find_program(TIMEOUT_EXECUTABLE timeout)
++if(TIMEOUT_EXECUTABLE)
++    add_test(NAME console-interactive
++             COMMAND sh -c "\"$0\" 10 \"$@\"; test $? = 124"
++                     ${TIMEOUT_EXECUTABLE} ${DISPARPDFC} --interactive --words
++                     ${DATA}/base.pdf ${DATA}/word.pdf)
++    set_tests_properties(console-interactive PROPERTIES ENVIRONMENT
++        "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/config")
++endif()
++
+ disparpdf_test(help - - --stdout "Usage: disparPDFc" -- --help)
+ disparpdf_test(version - - --stdout "disparPDFc ${PROJECT_VERSION}" -- --version)
+ 
+diff --git a/test/completion-bash.sh b/test/completion-bash.sh
+index da2a9b9..5744665 100755
+--- a/test/completion-bash.sh
++++ b/test/completion-bash.sh
+@@ -42,6 +42,8 @@ check 'disparPDF --outType=' '0 1 '
+ check 'disparPDF --start' '--startPage1= --startPage2= '
+ check 'disparPDF --b' '--batch '
+ check 'disparPDFc --b' ' '  # nothing
++check 'disparPDF --int' '--interactive '
++check 'disparPDFc --int' '--interactive '
+ check 'disparPDF --pdfdiff=' 'B.PDF a.pdf sub '
+ check 'disparPDF --xmlResult=' 'r.xml sub '
+ check 'disparPDF --settings=' 'B.PDF a.pdf notes.txt r.xml sub '
+diff --git a/test/completion-zsh.sh b/test/completion-zsh.sh
+index f055f07..cd8486f 100755
+--- a/test/completion-zsh.sh
++++ b/test/completion-zsh.sh
+@@ -66,6 +66,8 @@ check 'disparPDF --outType=' '0 1 '
+ check 'disparPDF --start' '--startPage1 --startPage2 '
+ check 'disparPDF --b' '--batch '
+ check 'disparPDFc --b' ''
++check 'disparPDFc --int' '--interactive '
++check 'disparPDF -b --int' ''
+ check 'disparPDF --pdfdiff=' 'B.PDF a.pdf sub '
+ check 'disparPDF --xmlResult=' 'r.xml sub '
+ check 'disparPDF --any-extension ' 'B.PDF a.pdf notes.txt r.xml sub '

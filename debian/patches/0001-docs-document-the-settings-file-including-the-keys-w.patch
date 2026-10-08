@@ -1,0 +1,142 @@
+From: yuw <p.typog@gmail.com>
+Date: Thu, 8 Oct 2026 10:41:40 +0900
+Subject: docs: document the settings file,
+ including the keys with no GUI control
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+CompareThreads and compositionMode have no control anywhere in the UI and
+were undiscoverable. The keys that do have one are listed alongside them,
+since disparPDFc takes an INI file and there was nothing to write it from.
+
+Every default was checked against the code. Note that
+InitialComparisonMode defaults to CompareWords, not appearance — batch
+mode is the one that falls back to appearance.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+---
+ README.ja.md | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
+ README.md    | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 98 insertions(+)
+
+diff --git a/README.ja.md b/README.ja.md
+index 44851d8..991a630 100644
+--- a/README.ja.md
++++ b/README.ja.md
+@@ -189,6 +189,54 @@ disparPDFc -b --outType=1 a.pdf b.pdf
+ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
++## 設定
++
++GUIはユーザーごとに設定を保存します．macOSでは
++`~/Library/Preferences/com.disparpdf.disparPDF.plist`です．
++
++`disparPDFc`はこのファイルを読まず，`--settings=FILE`で指定したINIファイルを
++読みます．既定値以外の条件でスクリプトから比較する場合はこれを使います：
++
++```sh
++disparPDFc -a --settings=mysettings.ini a.pdf b.pdf
++```
++
++以下のうち大半はGUIにも操作個所があります．`disparPDFc`向けのINIファイルを
++手で書けるように一覧にしてあります．最後の2つだけはGUIに操作個所がありません．
++
++### 比較
++
++| キー | 既定値 | GUI | 意味 |
++|---|---|---|---|
++| `InitialComparisonMode` | `2` | 比較モードの選択 | GUIの起動時モード．0=外観，1=文字，2=単語．バッチモードはこれを見ず，`-a`・`-c`・`-w`のいずれも指定しなければ外観比較になる |
++| `Margins/Exclude` | `false` | マージンを除外 | 下記マージンの外側を比較対象から外す |
++| `Margins/Top`・`/Bottom`・`/Left`・`/Right` | `0` | マージンのドック | マージンの大きさ（ポイント） |
++| `Zoning/Enable` | `false` | ゾーニング | 比較前にテキストをゾーンにまとめる |
++| `Columns` | `1` | 段数 | ページの段数．ゾーニングの精度が上がる |
++| `Tolerance/R` | `8` | Tolerance/R | 同一ゾーンとみなす単語矩形間の最大距離（4〜144） |
++| `Tolerance/Y` | `10` | Tolerance/Y | ゾーニング時にテキストの*y*座標を丸める単位（0〜32） |
++
++### 表示とハイライト
++
++| キー | 既定値 | GUI | 意味 |
++|---|---|---|---|
++| `Zoom` | `100` | ズーム | 表示倍率（パーセント） |
++| `Outline`・`Fill` | — | オプション ▸ ハイライト | ハイライトのペンとブラシ．Qtの値をシリアライズしたものなので，手で書かずダイアログから設定する |
++| `Opacity` | `13` | オプション ▸ 塗りの不透明度 | 塗りの不透明度（パーセント） |
++| `RuleWidth` | `1.5` | オプション ▸ 線幅 | ハイライトの輪郭線の太さ |
++| `SquareSize` | `10` | オプション ▸ 四角のサイズ | ハイライトの四角の大きさ（ピクセル） |
++| `CombineTextHighlighting` | `true` | オプション ▸ ハイライトを結合 | テキストモードで隣接するハイライトをまとめる |
++| `Overlap` | `5` | — | ハイライト矩形を結合する重なりの許容量 |
++| `ShowToolTips` | `true` | オプション ▸ ツールチップを表示 | メインウィンドウでツールチップを表示する |
++| `CacheSizeMB` | `25` | オプション ▸ キャッシュサイズ | レンダリング済みページのキャッシュ上限（MB） |
++
++### GUIに操作個所がない設定
++
++| キー | 既定値 | 意味 |
++|---|---|---|
++| `CompareThreads` | `0` | 比較に使うワーカースレッド数の上限．`0`はコア数分．各ワーカーが2つの文書を個別に開くため，値を下げるとピークメモリも下がる．1536ページの外観比較を8コアで実行した場合，最大RSSは`0`で223MB，`4`で152MB，`1`で89MB（並列化前は74MB）．所要時間は1.4秒に対し2.8秒 |
++| `compositionMode` | `-1` | 外観比較の差異を描画する`QPainter::CompositionMode`の値．`-1`で通常のハイライトになる．GUIのハイライトモード選択に相当する．22=Difference，23=Exclusion，26=Src Xor Dest，29=Not Src Xor Dest |
++
+ ## ライセンス
+ 
+ GPL-2.0-or-later
+diff --git a/README.md b/README.md
+index bcba335..974163f 100644
+--- a/README.md
++++ b/README.md
+@@ -192,6 +192,56 @@ disparPDFc -b --outType=1 a.pdf b.pdf
+ disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+ ```
+ 
++## Settings
++
++The GUI keeps its settings per user, on macOS in
++`~/Library/Preferences/com.disparpdf.disparPDF.plist`.
++
++`disparPDFc` ignores that file and reads an INI file given with
++`--settings=FILE`, which is how a scripted comparison gets non-default
++options:
++
++```sh
++disparPDFc -a --settings=mysettings.ini a.pdf b.pdf
++```
++
++Most keys below also have a control in the GUI; they are listed so that an
++INI file for `disparPDFc` can be written by hand. The last two have no GUI
++control at all.
++
++### Comparison
++
++| Key | Default | GUI | Meaning |
++|---|---|---|---|
++| `InitialComparisonMode` | `2` | Compare box | Mode the GUI starts in: 0 appearance, 1 characters, 2 words. Batch mode ignores this and compares appearance unless `-a`, `-c` or `-w` is given |
++| `Margins/Exclude` | `false` | Exclude Margins | Ignore everything outside the margins below |
++| `Margins/Top`, `/Bottom`, `/Left`, `/Right` | `0` | Margins dock | Margin sizes, in points |
++| `Zoning/Enable` | `false` | Zoning | Group text into zones before comparing |
++| `Columns` | `1` | Columns | How many columns the page has; improves zoning |
++| `Tolerance/R` | `8` | Tolerance/R | Largest distance (4–144) between word rectangles for them to land in the same zone |
++| `Tolerance/Y` | `10` | Tolerance/Y | Text *y* coordinates are rounded to this (0–32) when zoning |
++
++### Display and highlighting
++
++| Key | Default | GUI | Meaning |
++|---|---|---|---|
++| `Zoom` | `100` | Zoom | View magnification, per cent |
++| `Outline`, `Fill` | — | Options ▸ Highlighting | Pen and brush for highlights. These are serialised Qt values, so set them through the dialog rather than by hand |
++| `Opacity` | `13` | Options ▸ Fill Opacity | Fill opacity, per cent |
++| `RuleWidth` | `1.5` | Options ▸ Rule width | Width of the highlight outline |
++| `SquareSize` | `10` | Options ▸ Square Size | Size of the highlight square, in pixels |
++| `CombineTextHighlighting` | `true` | Options ▸ Combine Highlighting | Merge adjacent highlights in the text modes |
++| `Overlap` | `5` | — | How far highlight rectangles may overlap before they are merged |
++| `ShowToolTips` | `true` | Options ▸ Show Tooltips | Show tool tips in the main window |
++| `CacheSizeMB` | `25` | Options ▸ Cache Size | Limit on the rendered-page cache, in MB |
++
++### No GUI control
++
++| Key | Default | Meaning |
++|---|---|---|
++| `CompareThreads` | `0` | Upper bound on comparison worker threads; `0` means one per core. Each worker opens its own copy of both documents, so lowering this lowers peak memory. On a 1536-page appearance comparison across 8 cores, peak RSS was 223 MB at `0`, 152 MB at `4` and 89 MB at `1` — against 74 MB before the comparison was threaded, and 2.8 s instead of 1.4 s |
++| `compositionMode` | `-1` | `QPainter::CompositionMode` used to draw appearance differences; `-1` draws the ordinary highlight. This is the batch-mode counterpart of the GUI's highlighting-mode box: 22 Difference, 23 Exclusion, 26 Src Xor Dest, 29 Not Src Xor Dest |
++
+ ## License
+ 
+ GPL-2.0-or-later

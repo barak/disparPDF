@@ -1,1 +1,4 @@
+# translations, which the build copies into the source tree
 *.qm
+# copied in from debian/test-data
+test/data/*.pdf
