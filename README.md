@@ -192,6 +192,56 @@ disparPDFc -b --outType=1 a.pdf b.pdf
 disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
 ```
 
+## Settings
+
+The GUI keeps its settings per user, on macOS in
+`~/Library/Preferences/com.disparpdf.disparPDF.plist`.
+
+`disparPDFc` ignores that file and reads an INI file given with
+`--settings=FILE`, which is how a scripted comparison gets non-default
+options:
+
+```sh
+disparPDFc -a --settings=mysettings.ini a.pdf b.pdf
+```
+
+Most keys below also have a control in the GUI; they are listed so that an
+INI file for `disparPDFc` can be written by hand. The last two have no GUI
+control at all.
+
+### Comparison
+
+| Key | Default | GUI | Meaning |
+|---|---|---|---|
+| `InitialComparisonMode` | `2` | Compare box | Mode the GUI starts in: 0 appearance, 1 characters, 2 words. Batch mode ignores this and compares appearance unless `-a`, `-c` or `-w` is given |
+| `Margins/Exclude` | `false` | Exclude Margins | Ignore everything outside the margins below |
+| `Margins/Top`, `/Bottom`, `/Left`, `/Right` | `0` | Margins dock | Margin sizes, in points |
+| `Zoning/Enable` | `false` | Zoning | Group text into zones before comparing |
+| `Columns` | `1` | Columns | How many columns the page has; improves zoning |
+| `Tolerance/R` | `8` | Tolerance/R | Largest distance (4–144) between word rectangles for them to land in the same zone |
+| `Tolerance/Y` | `10` | Tolerance/Y | Text *y* coordinates are rounded to this (0–32) when zoning |
+
+### Display and highlighting
+
+| Key | Default | GUI | Meaning |
+|---|---|---|---|
+| `Zoom` | `100` | Zoom | View magnification, per cent |
+| `Outline`, `Fill` | — | Options ▸ Highlighting | Pen and brush for highlights. These are serialised Qt values, so set them through the dialog rather than by hand |
+| `Opacity` | `13` | Options ▸ Fill Opacity | Fill opacity, per cent |
+| `RuleWidth` | `1.5` | Options ▸ Rule width | Width of the highlight outline |
+| `SquareSize` | `10` | Options ▸ Square Size | Size of the highlight square, in pixels |
+| `CombineTextHighlighting` | `true` | Options ▸ Combine Highlighting | Merge adjacent highlights in the text modes |
+| `Overlap` | `5` | — | How far highlight rectangles may overlap before they are merged |
+| `ShowToolTips` | `true` | Options ▸ Show Tooltips | Show tool tips in the main window |
+| `CacheSizeMB` | `25` | Options ▸ Cache Size | Limit on the rendered-page cache, in MB |
+
+### No GUI control
+
+| Key | Default | Meaning |
+|---|---|---|
+| `CompareThreads` | `0` | Upper bound on comparison worker threads; `0` means one per core. Each worker opens its own copy of both documents, so lowering this lowers peak memory. On a 1536-page appearance comparison across 8 cores, peak RSS was 223 MB at `0`, 152 MB at `4` and 89 MB at `1` — against 74 MB before the comparison was threaded, and 2.8 s instead of 1.4 s |
+| `compositionMode` | `-1` | `QPainter::CompositionMode` used to draw appearance differences; `-1` draws the ordinary highlight. This is the batch-mode counterpart of the GUI's highlighting-mode box: 22 Difference, 23 Exclusion, 26 Src Xor Dest, 29 Not Src Xor Dest |
+
 ## License
 
 GPL-2.0-or-later
