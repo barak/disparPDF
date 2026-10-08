@@ -11,6 +11,7 @@
 */
 
 #include "saveform.hpp"
+#include "aboutform.hpp"
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -33,7 +34,7 @@ SaveForm::SaveForm(const QString &path, QString *filename, bool *saveAll,
     createConnections();
 
     updateUi();
-    setWindowTitle(tr("DiffPDF — Save As"));
+    setWindowTitle(tr("%1 — Save As").arg(AboutForm::ProgramName));
 }
 
 
@@ -94,11 +95,11 @@ void SaveForm::createLayout()
 
 void SaveForm::createConnections()
 {
-    connect(chooseFileButton, &QAbstractButton::clicked, this, &SaveForm::chooseFile);
-    connect(filenameLineEdit, &QLineEdit::textChanged,
-            this, &SaveForm::updateUi);
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &SaveForm::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(chooseFileButton, SIGNAL(clicked()), this, SLOT(chooseFile()));
+    connect(filenameLineEdit, SIGNAL(textChanged(const QString&)),
+            this, SLOT(updateUi()));
+    connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+    connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 }
 
 
@@ -113,10 +114,10 @@ void SaveForm::chooseFile()
 {
     QList<QByteArray> formats = QImageWriter::supportedImageFormats();
     QStringList suffixes;
-    foreach (const QByteArray &format, formats)
+    for (const QByteArray &format : formats)
         suffixes << "*." + QString(format.toLower());
     QString filename = QFileDialog::getSaveFileName(this,
-            tr("DiffPDF — Browse"), m_path,
+            tr("%1 — Browse").arg(AboutForm::ProgramName), m_path,
             tr("PDF files (*.pdf);;Image files (%1)")
             .arg(suffixes.join(" ")));
     if (!filename.isEmpty()) {

@@ -20,6 +20,8 @@ class AboutForm : public QDialog
 
 public:
     AboutForm(QWidget *parent=0);
+    static const QString Version;
+    static const QString ProgramName;
 };
 
 #endif // ABOUTFORM_HPP

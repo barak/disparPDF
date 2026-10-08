@@ -12,7 +12,7 @@
 
 #include "generic.hpp"
 #include "lineedit.hpp"
-
+#include <QDragEnterEvent>
 #include <QDragEnterEvent>
 #include <QMimeData>
 

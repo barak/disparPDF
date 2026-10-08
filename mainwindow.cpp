@@ -18,6 +18,8 @@
 #include "mainwindow.hpp"
 #include "sequence_matcher.hpp"
 #include "textitem.hpp"
+#include <QElapsedTimer>
+#include <QRegularExpression>
 #ifdef DEBUG
 #include <QtDebug>
 #endif
@@ -44,12 +46,12 @@
 #include <QSettings>
 #include <QSpinBox>
 #include <QSplitter>
-
+#include <QUrl>
 
 MainWindow::MainWindow(const Debug debug,
         const InitialComparisonMode comparisonMode,
         const QString &filename1, const QString &filename2,
-        const QString &language, QWidget *parent)
+        const QString &language, StartupParameters *startupParameters, Status *status, QWidget *parent)
     : QMainWindow(parent),
       controlDockArea(Qt::RightDockWidgetArea),
       actionDockArea(Qt::RightDockWidgetArea),
@@ -59,6 +61,10 @@ MainWindow::MainWindow(const Debug debug,
       saveAll(true), savePages(SaveBothPages), language(language),
       debug(debug), aboutForm(0), helpForm(0)
 {
+    _startupParameters = startupParameters ;
+    currentCompareIndex = comparisonMode ;
+    currentShowCompareIndex = 0 ;
+    _status = status ;
     currentPath = QDir::homePath();
     QSettings settings;
     pen.setStyle(Qt::NoPen);
@@ -98,7 +104,7 @@ MainWindow::MainWindow(const Debug debug,
     marginsDockWidget->resize(marginsDockWidget->minimumSizeHint());
     //logDockWidget->resize(logDockWidget->minimumSizeHint());
 
-    setWindowTitle(tr("DiffPDF"));
+    setWindowTitle(AboutForm::ProgramName);
     setWindowIcon(QIcon(":/icon.png"));
     compareComboBox->setCurrentIndex(comparisonMode);
     QMetaObject::invokeMethod(this, "initialize", Qt::QueuedConnection,
@@ -236,9 +242,9 @@ void MainWindow::createWidgets(const QString &filename1,
     columnsSpinBox->setRange(1, 16);
     columnsSpinBox->setValue(settings.value("Columns", 1).toInt());
     columnsSpinBox->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
-    columnsSpinBox->setToolTip(tr("<p>Use this to tell DiffPDF how "
+    columnsSpinBox->setToolTip(tr("<p>Use this to tell %1 how "
                 "many columns the page has; this should improve the "
-                "zoning."));
+                "zoning.").arg(AboutForm::ProgramName));
     columnsLabel->setBuddy(columnsSpinBox);
     toleranceRLabel = new QLabel(tr("Tolerance/&R:"));
     toleranceRSpinBox = new QSpinBox;
@@ -342,7 +348,7 @@ void MainWindow::createWidgets(const QString &filename1,
             << rightMarginLabel << rightMarginSpinBox << saveButton
             << helpButton << aboutButton << quitButton << logEdit
             << previousButton << nextButton << showZonesCheckBox;
-    foreach (QWidget *widget, widgets)
+    for (QWidget *widget : widgets)
         if (!widget->toolTip().isEmpty())
             widget->installEventFilter(this);
 }
@@ -513,107 +519,106 @@ void MainWindow::createDockWidgets()
 
 void MainWindow::createConnections()
 {
-    connect(area1->verticalScrollBar(), &QAbstractSlider::valueChanged,
-            area2->verticalScrollBar(), &QAbstractSlider::setValue);
-    connect(area2->verticalScrollBar(), &QAbstractSlider::valueChanged,
-            area1->verticalScrollBar(), &QAbstractSlider::setValue);
-    connect(area1->horizontalScrollBar(), &QAbstractSlider::valueChanged,
-            area2->horizontalScrollBar(), &QAbstractSlider::setValue);
-    connect(area2->horizontalScrollBar(), &QAbstractSlider::valueChanged,
-            area1->horizontalScrollBar(), &QAbstractSlider::setValue);
+    connect(area1->verticalScrollBar(), SIGNAL(valueChanged(int)),
+            area2->verticalScrollBar(), SLOT(setValue(int)));
+    connect(area2->verticalScrollBar(), SIGNAL(valueChanged(int)),
+            area1->verticalScrollBar(), SLOT(setValue(int)));
+    connect(area1->horizontalScrollBar(), SIGNAL(valueChanged(int)),
+            area2->horizontalScrollBar(), SLOT(setValue(int)));
+    connect(area2->horizontalScrollBar(), SIGNAL(valueChanged(int)),
+            area1->horizontalScrollBar(), SLOT(setValue(int)));
 
-    connect(filename1LineEdit, &QLineEdit::textEdited,
-            this, &MainWindow::updateUi);
+    connect(filename1LineEdit, SIGNAL(textEdited(const QString&)),
+            this, SLOT(updateUi()));
     connect(filename1LineEdit,
-            &LineEdit::filenamesDropped,
-            this, &MainWindow::setFiles1);
-    connect(filename2LineEdit, &QLineEdit::textEdited,
-            this, &MainWindow::updateUi);
+            SIGNAL(filenamesDropped(const QStringList&)),
+            this, SLOT(setFiles1(const QStringList&)));
+    connect(filename2LineEdit, SIGNAL(textEdited(const QString&)),
+            this, SLOT(updateUi()));
     connect(filename2LineEdit,
-            &LineEdit::filenamesDropped,
-            this, &MainWindow::setFiles2);
+            SIGNAL(filenamesDropped(const QStringList&)),
+            this, SLOT(setFiles2(const QStringList&)));
 
-    connect(page1Label, &Label::filenamesDropped,
-            this, &MainWindow::setFiles1);
-    connect(page2Label, &Label::filenamesDropped,
-            this, &MainWindow::setFiles2);
+    connect(page1Label, SIGNAL(filenamesDropped(const QStringList&)),
+            this, SLOT(setFiles1(const QStringList&)));
+    connect(page2Label, SIGNAL(filenamesDropped(const QStringList&)),
+            this, SLOT(setFiles2(const QStringList&)));
 
-    connect(compareComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &MainWindow::updateUi);
-    connect(compareComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &MainWindow::updateViews);
+    connect(compareComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateUi()));
+    connect(compareComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateViews()));
 
-    connect(viewDiffComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &MainWindow::updateViews);
-    connect(viewDiffComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &MainWindow::updateUi);
-    connect(showComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &MainWindow::updateViews);
-    connect(previousButton, &QAbstractButton::clicked,
-            this, &MainWindow::previousPages);
-    connect(nextButton, &QAbstractButton::clicked, this, &MainWindow::nextPages);
-    connect(setFile1Button, &QAbstractButton::clicked, this, [this] { setFile1();});
-    connect(setFile2Button, &QAbstractButton::clicked, this, [this] { setFile2();});
-    connect(compareButton, &QAbstractButton::clicked, this, &MainWindow::compare);
-    connect(zoomSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(zoningGroupBox, &QGroupBox::toggled,
-            this, &MainWindow::updateUi);
-    connect(zoningGroupBox, &QGroupBox::toggled,
-            this, &MainWindow::updateViews);
-    connect(columnsSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(toleranceRSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(toleranceYSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(showZonesCheckBox, &QAbstractButton::toggled,
-            this, &MainWindow::updateViews);
-    connect(marginsGroupBox, &QGroupBox::toggled,
-            this, &MainWindow::updateUi);
-    connect(marginsGroupBox, &QGroupBox::toggled,
-            this, &MainWindow::updateViews);
-    connect(leftMarginSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(rightMarginSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(topMarginSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(bottomMarginSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &MainWindow::updateViews);
-    connect(page1Label, &Label::clicked,
-            this, &MainWindow::setAMargin);
-    connect(page2Label, &Label::clicked,
-            this, &MainWindow::setAMargin);
+    connect(viewDiffComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateViews(int)));
+    connect(viewDiffComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateUi()));
+    connect(showComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateViews()));
+    connect(previousButton, &QPushButton::clicked, this, &MainWindow::previousPages);
+    connect(nextButton, &QPushButton::clicked, this, &MainWindow::nextPages);
+    connect(setFile1Button, &QPushButton::clicked, this, [this]() { setFile1(); });
+    connect(setFile2Button, &QPushButton::clicked, this, [this]() { setFile2(); });
+    connect(compareButton, &QPushButton::clicked, this, &MainWindow::compare);
+    connect(zoomSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(zoningGroupBox, SIGNAL(toggled(bool)),
+            this, SLOT(updateUi()));
+    connect(zoningGroupBox, SIGNAL(toggled(bool)),
+            this, SLOT(updateViews()));
+    connect(columnsSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(toleranceRSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(toleranceYSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(showZonesCheckBox, SIGNAL(toggled(bool)),
+            this, SLOT(updateViews()));
+    connect(marginsGroupBox, SIGNAL(toggled(bool)),
+            this, SLOT(updateUi()));
+    connect(marginsGroupBox, SIGNAL(toggled(bool)),
+            this, SLOT(updateViews()));
+    connect(leftMarginSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(rightMarginSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(topMarginSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(bottomMarginSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateViews()));
+    connect(page1Label, SIGNAL(clicked(const QPoint&)),
+            this, SLOT(setAMargin(const QPoint&)));
+    connect(page2Label, SIGNAL(clicked(const QPoint&)),
+            this, SLOT(setAMargin(const QPoint&)));
 
-    connect(optionsButton, &QAbstractButton::clicked, this, &MainWindow::options);
-    connect(saveButton, &QAbstractButton::clicked, this, &MainWindow::save);
-    connect(helpButton, &QAbstractButton::clicked, this, &MainWindow::help);
-    connect(aboutButton, &QAbstractButton::clicked, this, &MainWindow::about);
-    connect(quitButton, &QAbstractButton::clicked, this, &QWidget::close);
+    connect(optionsButton, &QPushButton::clicked, this, &MainWindow::options);
+    connect(saveButton, &QPushButton::clicked, this, &MainWindow::save);
+    connect(helpButton, &QPushButton::clicked, this, &MainWindow::help);
+    connect(aboutButton, &QPushButton::clicked, this, &MainWindow::about);
+    connect(quitButton, &QPushButton::clicked, this, &MainWindow::close);
 
     connect(controlDockWidget,
-            &QDockWidget::dockLocationChanged,
-            this, &MainWindow::controlDockLocationChanged);
+            SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(controlDockLocationChanged(Qt::DockWidgetArea)));
     connect(actionDockWidget,
-            &QDockWidget::dockLocationChanged,
-            this, &MainWindow::actionDockLocationChanged);
+            SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(actionDockLocationChanged(Qt::DockWidgetArea)));
     connect(zoningDockWidget,
-            &QDockWidget::dockLocationChanged,
-            this, &MainWindow::zoningDockLocationChanged);
+            SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(zoningDockLocationChanged(Qt::DockWidgetArea)));
     connect(marginsDockWidget,
-            &QDockWidget::dockLocationChanged,
-            this, &MainWindow::marginsDockLocationChanged);
-    connect(controlDockWidget, &QDockWidget::topLevelChanged,
-            this, &MainWindow::controlTopLevelChanged);
-    connect(actionDockWidget, &QDockWidget::topLevelChanged,
-            this, &MainWindow::actionTopLevelChanged);
-    connect(zoningDockWidget, &QDockWidget::topLevelChanged,
-            this, &MainWindow::zoningTopLevelChanged);
-    connect(marginsDockWidget, &QDockWidget::topLevelChanged,
-            this, &MainWindow::marginsTopLevelChanged);
-    connect(logDockWidget, &QDockWidget::topLevelChanged,
-            this, &MainWindow::logTopLevelChanged);
+            SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
+            this, SLOT(marginsDockLocationChanged(Qt::DockWidgetArea)));
+    connect(controlDockWidget, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(controlTopLevelChanged(bool)));
+    connect(actionDockWidget, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(actionTopLevelChanged(bool)));
+    connect(zoningDockWidget, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(zoningTopLevelChanged(bool)));
+    connect(marginsDockWidget, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(marginsTopLevelChanged(bool)));
+    connect(logDockWidget, SIGNAL(topLevelChanged(bool)),
+            this, SLOT(logTopLevelChanged(bool)));
 }
 
 
@@ -635,14 +640,15 @@ void MainWindow::initialize(const QString &filename1,
 
 void MainWindow::updateUi()
 {
+    currentCompareIndex = compareComboBox->currentIndex();
     compareButton->setEnabled(!filename1LineEdit->text().isEmpty() &&
                               !filename2LineEdit->text().isEmpty());
     saveButton->setEnabled(viewDiffComboBox->count() > 1);
     if (!showZonesCheckBox->isEnabled())
         showZonesCheckBox->setChecked(false);
-    if (compareComboBox->currentIndex() != CompareAppearance)
+    if (currentCompareIndex != CompareAppearance)
         showComboBox->setCurrentIndex(0);
-    showComboBox->setEnabled(compareComboBox->currentIndex() ==
+    showComboBox->setEnabled(currentCompareIndex ==
                              CompareAppearance);
     QPushButton *button = qobject_cast<QPushButton*>(focusWidget());
     bool enableNavigationButton = (button == previousButton ||
@@ -667,6 +673,7 @@ void MainWindow::updateUi()
         page1Label->setCursor(Qt::ArrowCursor);
         page2Label->setCursor(Qt::ArrowCursor);
     }
+    currentShowCompareIndex = showComboBox->currentIndex();
 }
 
 
@@ -723,7 +730,7 @@ void MainWindow::controlTopLevelChanged(bool floating)
     if (QWidget *widget = static_cast<QWidget*>(controlLayout->parent()))
         widget->setFixedSize(floating ? widget->minimumSizeHint()
                 : QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
-    controlDockWidget->setWindowTitle(floating ? tr("DiffPDF — Controls")
+    controlDockWidget->setWindowTitle(floating ? tr("%1 — Controls").arg(AboutForm::ProgramName)
                                                : tr("Controls"));
 }
 
@@ -735,7 +742,7 @@ void MainWindow::actionTopLevelChanged(bool floating)
     if (QWidget *widget = static_cast<QWidget*>(actionLayout->parent()))
         widget->setFixedSize(floating ? widget->minimumSizeHint()
                 : QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
-    actionDockWidget->setWindowTitle(floating ? tr("DiffPDF — Actions")
+    actionDockWidget->setWindowTitle(floating ? tr("%1 — Actions").arg(AboutForm::ProgramName)
                                               : tr("Actions"));
 }
 
@@ -747,7 +754,7 @@ void MainWindow::zoningTopLevelChanged(bool floating)
     if (QWidget *widget = static_cast<QWidget*>(zoningLayout->parent()))
         widget->setFixedSize(floating ? widget->minimumSizeHint()
                 : QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
-    zoningDockWidget->setWindowTitle(floating ? tr("DiffPDF — Zoning")
+    zoningDockWidget->setWindowTitle(floating ? tr("%1 — Zoning").arg(AboutForm::ProgramName)
                                               : tr("Zoning"));
 }
 
@@ -759,14 +766,14 @@ void MainWindow::marginsTopLevelChanged(bool floating)
     if (QWidget *widget = static_cast<QWidget*>(marginsLayout->parent()))
         widget->setFixedSize(floating ? widget->minimumSizeHint()
                 : QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
-    marginsDockWidget->setWindowTitle(floating ? tr("DiffPDF — Margins")
+    marginsDockWidget->setWindowTitle(floating ? tr("%1 — Margins").arg(AboutForm::ProgramName)
                                               : tr("Margins"));
 }
 
 
 void MainWindow::logTopLevelChanged(bool floating)
 {
-    logDockWidget->setWindowTitle(floating ? tr("DiffPDF — Log")
+    logDockWidget->setWindowTitle(floating ? tr("%1 — Log").arg(AboutForm::ProgramName)
                                            : tr("Log"));
 }
 
@@ -789,6 +796,7 @@ void MainWindow::nextPages()
 
 void MainWindow::updateViews(int index)
 {
+    currentShowCompareIndex = showComboBox->currentIndex();
     if (index == 0) {
         page1Label->clear();
         page2Label->clear();
@@ -800,11 +808,13 @@ void MainWindow::updateViews(int index)
     if (pair.isNull())
         return;
 
+    currentCompareIndex = compareComboBox->currentIndex();
+
     QString filename1 = filename1LineEdit->text();
     PdfDocument pdf1 = getPdf(filename1);
     if (!pdf1)
         return;
-    PdfPage page1(pdf1->page(pair.left));
+    PdfPage page1 = pdf1->page(pair.left);
     if (!page1)
         return;
 
@@ -812,7 +822,7 @@ void MainWindow::updateViews(int index)
     PdfDocument pdf2 = getPdf(filename2);
     if (!pdf2)
         return;
-    PdfPage page2(pdf2->page(pair.right));
+    PdfPage page2 = pdf2->page(pair.right);
     if (!page2)
         return;
 
@@ -833,10 +843,10 @@ const QPair<QString, QString> MainWindow::cacheKeys(const int index,
         const PagePair &pair) const
 {
     int comparisonMode;
-    if (compareComboBox->currentIndex() == CompareAppearance)
-        comparisonMode = showComboBox->currentIndex();
+    if (currentCompareIndex == CompareAppearance)
+        comparisonMode = currentShowCompareIndex;
     else
-        comparisonMode = -compareComboBox->currentIndex();
+        comparisonMode = -currentCompareIndex;
     QString zoning;
     if (zoningGroupBox->isChecked())
         zoning = QString("%1:%2:%3").arg(columnsSpinBox->value())
@@ -877,22 +887,17 @@ const QPair<QPixmap, QPixmap> MainWindow::populatePixmaps(
         QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         const int DPI = static_cast<int>(POINTS_PER_INCH *
                 (zoomSpinBox->value() / 100.0));
-        const bool compareText = compareComboBox->currentIndex() !=
-                                 CompareAppearance;
+        const bool compareText = currentCompareIndex != CompareAppearance;
         QImage plainImage1;
         QImage plainImage2;
         if (hasVisualDifference || !compareText) {
             plainImage1 = page1->renderToImage(DPI, DPI);
             plainImage2 = page2->renderToImage(DPI, DPI);
         }
-        pdf1->setRenderHint(Poppler::Document::Antialiasing);
-        pdf1->setRenderHint(Poppler::Document::TextAntialiasing);
-        pdf2->setRenderHint(Poppler::Document::Antialiasing);
-        pdf2->setRenderHint(Poppler::Document::TextAntialiasing);
         QImage image1 = page1->renderToImage(DPI, DPI);
         QImage image2 = page2->renderToImage(DPI, DPI);
 
-        if (compareComboBox->currentIndex() != CompareAppearance ||
+        if (currentCompareIndex != CompareAppearance ||
             showComboBox->currentIndex() == 0) {
             QPainterPath highlighted1;
             QPainterPath highlighted2;
@@ -911,7 +916,7 @@ const QPair<QPixmap, QPixmap> MainWindow::populatePixmaps(
                 font.setOverline(true);
                 font.setUnderline(true);
                 highlighted1.addText(DPI / 4, DPI / 4, font,
-                    tr("DiffPDF: False Positive"));
+                    tr("%1: False Positive").arg(AboutForm::ProgramName));
                 paintOnImage(highlighted1, &image1);
             }
             pixmap1 = QPixmap::fromImage(image1);
@@ -922,16 +927,11 @@ const QPair<QPixmap, QPixmap> MainWindow::populatePixmaps(
             QPainter painter(&composed);
             painter.setCompositionMode(QPainter::CompositionMode_Source);
             painter.fillRect(composed.rect(), Qt::transparent);
-            painter.setCompositionMode(
-                    QPainter::CompositionMode_SourceOver);
+            painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
             painter.drawImage(0, 0, image1);
-            painter.setCompositionMode(
-                    static_cast<QPainter::CompositionMode>(
-                        showComboBox->itemData(
-                            showComboBox->currentIndex()).toInt()));
+            painter.setCompositionMode(static_cast<QPainter::CompositionMode>(showComboBox->itemData(showComboBox->currentIndex()).toInt()));
             painter.drawImage(0, 0, image2);
-            painter.setCompositionMode(
-                    QPainter::CompositionMode_DestinationOver);
+            painter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
             painter.fillRect(composed.rect(), Qt::white);
             painter.end();
             pixmap2 = QPixmap::fromImage(composed);
@@ -948,8 +948,7 @@ void MainWindow::computeTextHighlights(QPainterPath *highlighted1,
         QPainterPath *highlighted2, const PdfPage &page1,
         const PdfPage &page2, const int DPI)
 {
-    const bool ComparingWords = compareComboBox->currentIndex() ==
-                                CompareWords;
+    const bool ComparingWords = currentCompareIndex == CompareWords;
     QRectF rect1;
     QRectF rect2;
     QSettings settings;
@@ -986,12 +985,12 @@ void MainWindow::computeTextHighlights(QPainterPath *highlighted1,
     rangesPair = invertRanges(rangesPair.first, items1.count(),
                               rangesPair.second, items2.count());
 
-    foreach (int index, rangesPair.first)
+    for (int index : rangesPair.first)
         addHighlighting(&rect1, highlighted1, items1.at(index).rect,
                         OVERLAP, DPI, COMBINE);
     if (!rect1.isNull() && !rangesPair.first.isEmpty())
         highlighted1->addRect(rect1);
-    foreach (int index, rangesPair.second)
+    for (int index : rangesPair.second)
         addHighlighting(&rect2, highlighted2, items2.at(index).rect,
                         OVERLAP, DPI, COMBINE);
     if (!rect2.isNull() && !rangesPair.second.isEmpty())
@@ -1099,7 +1098,7 @@ void MainWindow::paintOnImage(const QPainterPath &path, QImage *image)
         if (!qFuzzyCompare(RULE_WIDTH, 0.0)) {
             painter.setPen(QPen(pen.color()));
             QList<QPolygonF> polygons = path_.toFillPolygons();
-            foreach (const QPolygonF &polygon, polygons) {
+            for (const QPolygonF &polygon : polygons) {
                 const QRectF rect = polygon.boundingRect();
                 painter.drawRect(0, rect.y(), RULE_WIDTH, rect.height());
             }
@@ -1151,13 +1150,17 @@ bool MainWindow::eventFilter(QObject *object, QEvent *event)
     return QMainWindow::eventFilter(object, event);
 }
 
+QString MainWindow::finalFileName(const QString &filename)
+{
+    return filename;
+}
 
 void MainWindow::setFiles1(const QStringList &filenames)
 {
     if (filenames.count() && !filenames.at(0).isEmpty()) {
-        setFile1(filenames.at(0));
+        setFile1(finalFileName(filenames.at(0)));
         if (filenames.count() > 1 && !filenames.at(1).isEmpty())
-            setFile2(filenames.at(1));
+            setFile2(finalFileName(filenames.at(1)));
     }
 }
 
@@ -1165,9 +1168,9 @@ void MainWindow::setFiles1(const QStringList &filenames)
 void MainWindow::setFiles2(const QStringList &filenames)
 {
     if (filenames.count() && !filenames.at(0).isEmpty()) {
-        setFile2(filenames.at(0));
+        setFile2(finalFileName(filenames.at(0)));
         if (filenames.count() > 1 && !filenames.at(1).isEmpty())
-            setFile1(filenames.at(1));
+            setFile1(finalFileName(filenames.at(1)));
     }
 }
 
@@ -1176,22 +1179,23 @@ void MainWindow::setFile1(QString filename)
 {
     if (filename.isEmpty())
         filename = QFileDialog::getOpenFileName(this,
-                tr("DiffPDF — Choose File #1"), currentPath,
-                tr("PDF files (*.pdf)"));
+                tr("%1 — Choose File #1").arg(AboutForm::ProgramName), currentPath,
+                tr("PDF files (*.pdf)"), nullptr,
+                QFileDialog::DontUseNativeDialog);
     if (!filename.isEmpty()) {
         if (filename == filename2LineEdit->text()) {
-            QMessageBox::warning(this, tr("DiffPDF — Error"),
+            QMessageBox::warning(this, tr("%1 — Error").arg(AboutForm::ProgramName),
                     tr("Cannot compare a file to itself."));
             return;
         }
         filename1LineEdit->setText(filename);
         if (!filename2LineEdit->text().isEmpty())
             page1Label->setText(tr("<p style='font-size: xx-large;"
-                    "color: darkgreen'>DiffPDF: Click Compare<br>"
-                    "or change File #2.</p>"));
+                    "color: darkgreen'>%1: Click Compare<br>"
+                    "or change File #2.</p>").arg(AboutForm::ProgramName));
         else
             page1Label->setText(tr("<p style='font-size: xx-large;"
-                    "color: darkgreen'>DiffPDF: Choose File #2.</p>"));
+                    "color: darkgreen'>%1: Choose File #2.</p>").arg(AboutForm::ProgramName));
         page2Label->clear();
         updateUi();
         int page_count = writeFileInfo(filename);
@@ -1210,22 +1214,23 @@ void MainWindow::setFile2(QString filename)
 {
     if (filename.isEmpty())
         filename = QFileDialog::getOpenFileName(this,
-                tr("DiffPDF — Choose File #2"), currentPath,
-                tr("PDF files (*.pdf)"));
+                tr("%1 — Choose File #2").arg(AboutForm::ProgramName), currentPath,
+                tr("PDF files (*.pdf)"), nullptr,
+                QFileDialog::DontUseNativeDialog);
     if (!filename.isEmpty()) {
         if (filename == filename1LineEdit->text()) {
-            QMessageBox::warning(this, tr("DiffPDF — Error"),
+            QMessageBox::warning(this, tr("%1 — Error").arg(AboutForm::ProgramName),
                     tr("Cannot compare a file to itself."));
             return;
         }
         filename2LineEdit->setText(filename);
         if (!filename1LineEdit->text().isEmpty())
             page2Label->setText(tr("<p style='font-size: xx-large;"
-                    "color: darkgreen'>DiffPDF: Click Compare<br>"
-                    "or change File #1.</p>"));
+                    "color: darkgreen'>%1: Click Compare<br>"
+                    "or change File #1.</p>").arg(AboutForm::ProgramName));
         else
             page2Label->setText(tr("<p style='font-size: xx-large;"
-                    "color: darkgreen'>DiffPDF: Choose File #1.</p>"));
+                    "color: darkgreen'>%1: Choose File #1.</p>").arg(AboutForm::ProgramName));
         page1Label->clear();
         updateUi();
         int page_count = writeFileInfo(filename);
@@ -1243,21 +1248,29 @@ void MainWindow::setFile2(QString filename)
 PdfDocument MainWindow::getPdf(const QString &filename)
 {
     PdfDocument pdf(Poppler::Document::load(filename));
-    if (!pdf)
-        QMessageBox::warning(this, tr("DiffPDF — Error"),
-                tr("Cannot load '%1'.").arg(filename));
-    else if (pdf->isLocked()) {
-        QMessageBox::warning(this, tr("DiffPDF — Error"),
-                tr("Cannot read a locked PDF ('%1').").arg(filename));
-#if QT_VERSION >= 0x040600
-        pdf.clear();
-#else
-        pdf.reset();
-#endif
+    if(!_startupParameters->isBatch()) {
+        if (!pdf)
+            QMessageBox::warning(this, tr("%1 — Error").arg(AboutForm::ProgramName),
+                    tr("Cannot load '%1'.").arg(filename));
+        else if (pdf->isLocked()) {
+            QMessageBox::warning(this, tr("%1 — Error").arg(AboutForm::ProgramName),
+                    tr("Cannot read a locked PDF ('%1').").arg(filename));
+    #if QT_VERSION >= 0x040600
+            pdf.reset();
+    #else
+            pdf.reset();
+    #endif
+        }
+    }
+    if (pdf) {
+        // Compare and highlight pages as they are displayed: without
+        // antialiasing, some visible differences (such as text printed
+        // twice in the same place, which looks bolder) render identically.
+        pdf->setRenderHint(Poppler::Document::Antialiasing);
+        pdf->setRenderHint(Poppler::Document::TextAntialiasing);
     }
     return pdf;
 }
-
 
 int MainWindow::writeFileInfo(const QString &filename)
 {
@@ -1266,7 +1279,7 @@ int MainWindow::writeFileInfo(const QString &filename)
     if (!pdf)
         return page_count;
     writeLine(tr("<b>%1</b>").arg(filename));
-    foreach (const QString &key, pdf->infoKeys()) {
+    for (const QString &key : pdf->infoKeys()) {
         if (key == "CreationDate" || key == "ModDate")
             continue;
         writeLine(tr("%1: %2.").arg(key).arg(pdf->info(key)));
@@ -1283,7 +1296,7 @@ int MainWindow::writeFileInfo(const QString &filename)
     writeLine(tr("Page count: %1.").arg(page_count));
     if (page_count > 0) {
         const double PointToMM = 0.3527777777;
-        PdfPage page1(pdf->page(0));
+        PdfPage page1 = pdf->page(0);
         QSize size = page1->pageSize();
         writeLine(tr("Page size: %1pt x %2pt (%3mm x %4mm).")
                   .arg(size.width()).arg(size.height())
@@ -1312,17 +1325,17 @@ void MainWindow::writeError(const QString &text)
 }
 
 
-QList<int> MainWindow::getPageList(int which, PdfDocument pdf)
+QList<int> MainWindow::getPageList(int which, const PdfDocument &pdf)
 {
     // Poppler has 0-based page numbers; the UI has 1-based page numbers
     QLineEdit *pagesEdit = (which == 1 ? pages1LineEdit : pages2LineEdit);
     bool error = false;
     QList<int> pages;
     QString page_string = pagesEdit->text();
-    page_string = page_string.replace(QRegExp("\\s+"), "");
+    page_string = page_string.replace(QRegularExpression("\\s+"), "");
     QStringList page_list = page_string.split(",");
     bool ok;
-    foreach (const QString &page, page_list) {
+    for (const QString &page : page_list) {
         int hyphen = page.indexOf("-");
         if (hyphen > -1) {
             int p1 = page.left(hyphen).toInt(&ok);
@@ -1375,6 +1388,7 @@ void MainWindow::compare()
         compareButton->setEnabled(true);
         return;
     }
+    currentCompareIndex = compareComboBox->currentIndex() ;
     cancel = false;
     QString filename1 = filename1LineEdit->text();
     PdfDocument pdf1 = getPdf(filename1);
@@ -1387,7 +1401,7 @@ void MainWindow::compare()
     }
 
     comparePrepareUi();
-    QTime time;
+    QElapsedTimer time;
     time.start();
     const QPair<int, int> pair = comparePages(filename1, pdf1, filename2,
                                               pdf2);
@@ -1412,43 +1426,55 @@ const QPair<int, int> MainWindow::comparePages(const QString &filename1,
         const PdfDocument &pdf1, const QString &filename2,
         const PdfDocument &pdf2)
 {
-    QList<int> pages1 = getPageList(1, pdf1);
-    QList<int> pages2 = getPageList(2, pdf2);
-    int total = qMin(pages1.count(), pages2.count());
+    const QList<int> pages1 = getPageList(1, pdf1);
+    const QList<int> pages2 = getPageList(2, pdf2);
+    const int total = qMin(pages1.count(), pages2.count());
+    PageCompareOptions options;
+    options.compareAppearance = currentCompareIndex == CompareAppearance;
+    options.excludeMargins = marginsGroupBox->isChecked();
+    options.topMargin = topMarginSpinBox->value();
+    options.bottomMargin = bottomMarginSpinBox->value();
+    options.leftMargin = leftMarginSpinBox->value();
+    options.rightMargin = rightMarginSpinBox->value();
+    // 0 keeps one comparison worker per core; a positive value caps them,
+    // which also caps peak memory, since every worker opens its own pair
+    // of documents.  There is no GUI control: set it in the settings file.
+    options.maxWorkers = QSettings().value("CompareThreads", 0).toInt();
+    const QVector<PagePairResult> results = comparePagesInParallel(
+            filename1, pdf1, pages1, filename2, pdf2, pages2, options,
+            &cancel, [this, total](int done) {
+                statusLabel->setText(tr("Comparing %1/%2").arg(done)
+                                                          .arg(total));
+                QApplication::processEvents();
+            });
     int number = 0;
     int index = 0;
-    while (!pages1.isEmpty() && !pages2.isEmpty()) {
-        int p1 = pages1.takeFirst();
-        PdfPage page1(pdf1->page(p1));
-        if (!page1) {
-            writeError(tr("Failed to read page %1 from '%2'.")
-                          .arg(p1 + 1).arg(filename1));
+    for (int i = 0; i < total; ++i) {
+        const PagePairResult &result = results.at(i);
+        if (!result.compared)
             continue;
-        }
-        int p2 = pages2.takeFirst();
-        PdfPage page2(pdf2->page(p2));
-        if (!page2) {
+        const int p1 = pages1.at(i);
+        const int p2 = pages2.at(i);
+        if (result.unreadableFile) {
             writeError(tr("Failed to read page %1 from '%2'.")
-                          .arg(p2 + 1).arg(filename2));
+                    .arg((result.unreadableFile == 1 ? p1 : p2) + 1)
+                    .arg(result.unreadableFile == 1 ? filename1
+                                                    : filename2));
             continue;
         }
         writeLine(tr("Comparing: %1 vs. %2.").arg(p1 + 1).arg(p2 + 1));
-        QApplication::processEvents();
-        if (cancel) {
-            writeError(tr("Cancelled."));
-            break;
-        }
-        Difference difference = getTheDifference(page1, page2);
-        if (difference != NoDifference) {
+        ++number;
+        if (result.difference != NoPageDifference) {
             QVariant v;
-            v.setValue(PagePair(p1, p2, difference == VisualDifference));
+            v.setValue(PagePair(p1, p2,
+                    result.difference == VisualPageDifference));
             viewDiffComboBox->addItem(tr("%1 vs. %2 %3 %4")
                     .arg(p1 + 1).arg(p2 + 1).arg(QChar(0x2022))
                     .arg(++index), v);
         }
-        statusLabel->setText(tr("Comparing %1/%2").arg(++number)
-                                                  .arg(total));
     }
+    if (cancel)
+        writeError(tr("Cancelled."));
     return qMakePair(number, total);
 }
 
@@ -1480,7 +1506,7 @@ void MainWindow::compareUpdateUi(const QPair<int, int> &pair,
             writeLine(tr("The PDFs appear to be the same."));
             const QString message(tr("<p style='font-size: x-large;"
                     "color: darkgreen'>"
-                    "DiffPDF: The PDFs appear to be the same.</p>"));
+                    "%1: The PDFs appear to be the same.</p>").arg(AboutForm::ProgramName));
             page1Label->setText(message);
             page2Label->setText(message);
         }
@@ -1501,39 +1527,6 @@ void MainWindow::compareUpdateUi(const QPair<int, int> &pair,
 }
 
 
-MainWindow::Difference MainWindow::getTheDifference(PdfPage page1,
-                                                    PdfPage page2)
-{
-    QRectF rect;
-    if (marginsGroupBox->isChecked())
-        rect = pointRectForMargins(page1->pageSize());
-    const TextBoxList list1 = getTextBoxes(page1, rect);
-    const TextBoxList list2 = getTextBoxes(page2, rect);
-    if (list1.count() != list2.count())
-        return TextualDifference;
-    for (int i = 0; i < list1.count(); ++i)
-        if (list1[i]->text() != list2[i]->text())
-            return TextualDifference;
-
-    if (compareComboBox->currentIndex() == CompareAppearance) {
-        int x = -1;
-        int y = -1;
-        int width = -1;
-        int height = -1;
-        if (marginsGroupBox->isChecked())
-            computeImageOffsets(page1->pageSize(), &x, &y, &width,
-                    &height);
-        QImage image1 = page1->renderToImage(POINTS_PER_INCH,
-                POINTS_PER_INCH, x, y, width, height);
-        QImage image2 = page2->renderToImage(POINTS_PER_INCH,
-                POINTS_PER_INCH, x, y, width, height);
-        if (image1 != image2)
-            return VisualDifference;
-    }
-    return NoDifference;
-}
-
-
 QRectF MainWindow::pointRectForMargins(const QSize &size)
 {
     return rectForMargins(size.width(), size.height(),
@@ -1542,20 +1535,7 @@ QRectF MainWindow::pointRectForMargins(const QSize &size)
 }
 
 
-void MainWindow::computeImageOffsets(const QSize &size, int *x, int *y,
-        int *width, int *height)
-{
-    const int DPI = static_cast<int>(POINTS_PER_INCH *
-                (zoomSpinBox->value() / 100.0));
-    *y = pixelOffsetForPointValue(DPI, topMarginSpinBox->value());
-    *x = pixelOffsetForPointValue(DPI, leftMarginSpinBox->value());
-    *width = pixelOffsetForPointValue(DPI, size.width() -
-            (leftMarginSpinBox->value() + rightMarginSpinBox->value()));
-    *height = pixelOffsetForPointValue(DPI, size.height() -
-            (topMarginSpinBox->value() + bottomMarginSpinBox->value()));
-}
-
-
+// The offsets are in pixels of an image rendered at the given DPI
 void MainWindow::options()
 {
     QSettings settings;
@@ -1604,17 +1584,17 @@ void MainWindow::save()
         QString header;
         const QChar bullet(0x2022);
         if (savePages == SaveLeftPages)
-            header = tr("DiffPDF %1 %2 %1 %3").arg(bullet)
+            header = tr("%4 %1 %2 %1 %3").arg(bullet)
                 .arg(filename1)
-                .arg(QDate::currentDate().toString(Qt::ISODate));
+                .arg(QDate::currentDate().toString(Qt::ISODate)).arg(AboutForm::ProgramName);
         else if (savePages == SaveRightPages)
-            header = tr("DiffPDF %1 %2 %1 %3").arg(bullet)
+            header = tr("%4 %1 %2 %1 %3").arg(bullet)
                 .arg(filename2)
-                .arg(QDate::currentDate().toString(Qt::ISODate));
+                .arg(QDate::currentDate().toString(Qt::ISODate)).arg(AboutForm::ProgramName);
         else
-            header = tr("DiffPDF %1 %2 vs. %3 %1 %4").arg(bullet)
+            header = tr("%4 %1 %2 vs. %3 %1 %4").arg(bullet)
                 .arg(filename1).arg(filename2)
-                .arg(QDate::currentDate().toString(Qt::ISODate));
+                .arg(QDate::currentDate().toString(Qt::ISODate)).arg(AboutForm::ProgramName);
         if (saveFilename.toLower().endsWith(".pdf"))
             saveAsPdf(start, end, pdf1, pdf2, header);
         else
@@ -1631,10 +1611,10 @@ void MainWindow::saveAsImages(const int start, const int end,
         const PdfDocument &pdf1, const PdfDocument &pdf2,
         const QString &header)
 {
-    PdfPage page1(pdf1->page(0));
+    PdfPage page1 = pdf1->page(0);
     if (!page1)
         return;
-    PdfPage page2(pdf2->page(0));
+    PdfPage page2 = pdf2->page(0);
     if (!page2)
         return;
     int width = 2 * (savePages == SaveBothPages
@@ -1676,7 +1656,7 @@ void MainWindow::saveAsImages(const int start, const int end,
 }
 
 
-void MainWindow::saveAsPdf(const int start, const int end,
+void MainWindow::saveAsPdf( const int start, const int end,
         const PdfDocument &pdf1, const PdfDocument &pdf2,
         const QString &header)
 {
@@ -1684,9 +1664,9 @@ void MainWindow::saveAsPdf(const int start, const int end,
     printer.setOutputFileName(saveFilename);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setColorMode(QPrinter::Color);
-    printer.setCreator(tr("DiffPDF"));
-    printer.setOrientation(savePages == SaveBothPages
-            ? QPrinter::Landscape : QPrinter::Portrait);
+    printer.setCreator(AboutForm::ProgramName);
+    printer.setPageOrientation(savePages == SaveBothPages
+            ? QPageLayout::Landscape : QPageLayout::Portrait);
     QPainter painter(&printer);
     painter.setRenderHints(QPainter::Antialiasing|
             QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform);
@@ -1714,17 +1694,17 @@ void MainWindow::saveAsPdf(const int start, const int end,
 
 bool MainWindow::paintSaveAs(QPainter *painter, const int index,
         const PdfDocument &pdf1, const PdfDocument &pdf2,
-        const QString &header, const QRect &rect, const QRect &leftRect,
-        const QRect &rightRect)
+        const QString &header, const QRectF &rect, const QRectF &leftRect,
+        const QRectF &rightRect)
 {
     PagePair pair = viewDiffComboBox->itemData(index)
         .value<PagePair>();
     if (pair.isNull())
         return false;
-    PdfPage page1(pdf1->page(pair.left));
+    PdfPage page1 = pdf1->page(pair.left);
     if (!page1)
         return false;
-    PdfPage page2(pdf2->page(pair.right));
+    PdfPage page2 = pdf2->page(pair.right);
     if (!page2)
         return false;
     const QPair<QString, QString> keys = cacheKeys(index, pair);
@@ -1734,17 +1714,17 @@ bool MainWindow::paintSaveAs(QPainter *painter, const int index,
     painter->drawText(rect, header, QTextOption(Qt::AlignHCenter|
                                                 Qt::AlignTop));
     if (savePages == SaveBothPages) {
-        QRect rect = resizeRect(leftRect, pixmaps.first.size());
-        painter->drawPixmap(rect, pixmaps.first);
+        QRectF rect = resizeRect(leftRect, pixmaps.first.size());
+        painter->drawPixmap(rect.toAlignedRect(), pixmaps.first);
         rect = resizeRect(rightRect, pixmaps.second.size());
-        painter->drawPixmap(rect, pixmaps.second);
+        painter->drawPixmap(rect.toAlignedRect(), pixmaps.second);
         painter->drawRect(rightRect.adjusted(2.5, 2.5, 2.5, 2.5));
     } else if (savePages == SaveLeftPages) {
-        QRect rect = resizeRect(leftRect, pixmaps.first.size());
-        painter->drawPixmap(rect, pixmaps.first);
+        QRectF rect = resizeRect(leftRect, pixmaps.first.size());
+        painter->drawPixmap(rect.toAlignedRect(), pixmaps.first);
     } else { // (savePages == SaveRightPages)
-        QRect rect = resizeRect(leftRect, pixmaps.second.size());
-        painter->drawPixmap(rect, pixmaps.second);
+        QRectF rect = resizeRect(leftRect, pixmaps.second.size());
+        painter->drawPixmap(rect.toAlignedRect(), pixmaps.second);
     }
     painter->drawRect(leftRect.adjusted(2.5, 2.5, 2.5, 2.5));
     return true;
@@ -1781,7 +1761,7 @@ void MainWindow::showZones()
     PdfDocument pdf1 = getPdf(filename1);
     if (!pdf1)
         return;
-    PdfPage page1(pdf1->page(pair.left));
+    PdfPage page1 = pdf1->page(pair.left);
     if (!page1)
         return;
     const TextBoxList list1 = getTextBoxes(page1);
@@ -1791,7 +1771,7 @@ void MainWindow::showZones()
     PdfDocument pdf2 = getPdf(filename2);
     if (!pdf2)
         return;
-    PdfPage page2(pdf2->page(pair.right));
+    PdfPage page2 = pdf2->page(pair.right);
     if (!page2)
         return;
     const TextBoxList list2 = getTextBoxes(page2);
@@ -1802,7 +1782,7 @@ void MainWindow::showZones()
 void MainWindow::showZones(const int Width, const TextBoxList &list,
                            QLabel *label)
 {
-    if (!label || !label->pixmap() || label->pixmap()->isNull())
+    if (!label || !label->pixmap() || label->pixmap().isNull())
         return;
     const bool ComparingWords = compareComboBox->currentIndex() ==
                                 CompareWords;
@@ -1815,7 +1795,7 @@ void MainWindow::showZones(const int Width, const TextBoxList &list,
             columnsSpinBox->value());
     const int DPI = static_cast<int>(POINTS_PER_INCH *
             (zoomSpinBox->value() / 100.0));
-    QPixmap pixmap = label->pixmap()->copy();
+    QPixmap pixmap = label->pixmap().copy();
     QPainter painter(&pixmap);
     painter.setPen(Qt::green);
     for (int i = 0; i < paths.count(); ++i) {
@@ -1844,11 +1824,11 @@ void MainWindow::showMargins()
 
 void MainWindow::showMargins(QLabel *label)
 {
-    if (!label || !label->pixmap() || label->pixmap()->isNull())
+    if (!label || !label->pixmap() || label->pixmap().isNull())
         return;
     const int DPI = static_cast<int>(POINTS_PER_INCH *
                 (zoomSpinBox->value() / 100.0));
-    QPixmap pixmap = label->pixmap()->copy();
+    QPixmap pixmap = label->pixmap().copy();
     QPainter painter(&pixmap);
     painter.setPen(Qt::cyan);
     int left = leftMarginSpinBox->value();
@@ -1881,11 +1861,11 @@ void MainWindow::showMargins(QLabel *label)
 void MainWindow::setAMargin(const QPoint &pos)
 {
     if (!marginsGroupBox->isChecked() || !page1Label->pixmap() ||
-        page1Label->pixmap()->isNull())
+        page1Label->pixmap().isNull())
         return;
     const int DPI = static_cast<int>(POINTS_PER_INCH *
                 (zoomSpinBox->value() / 100.0));
-    const QSize &size = page1Label->pixmap()->size();
+    const QSize &size = page1Label->pixmap().size();
     int x = pos.x();
     int y = pos.y();
     const int HorizontalMiddle = size.width() / 2;
@@ -1906,3 +1886,55 @@ void MainWindow::setAMargin(const QPoint &pos)
                         (size.height() - y)));
     }
 }
+
+void MainWindow::setOverrideCursor()
+{
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+}
+
+void MainWindow::setRestoreCursor()
+{
+    QApplication::restoreOverrideCursor();
+}
+
+void MainWindow::processEvents()
+{
+    QApplication::processEvents();
+}
+
+void MainWindow::setStatusLabel(const QString &text)
+{
+    statusLabel->setText(text);
+}
+
+void MainWindow::messageBox(const QString &text)
+{
+    QMessageBox::warning(this, tr("%1 — Error").arg(AboutForm::ProgramName), text );
+}
+
+/*
+void MainWindow::initCompareParams(BatchCompare &compare)
+{
+    compare.currentCompareIndex = compareComboBox->currentIndex();
+    compare.pages1LineEdit = pages1LineEdit->text();
+    compare.pages2LineEdit = pages2LineEdit->text();
+
+    compare.columnsSpinBoxValue = columnsSpinBox->value() ;
+    compare.toleranceRSpinBoxValue = toleranceRSpinBox->value();
+    compare.toleranceYSpinBoxValue = toleranceYSpinBox->value();
+
+    compare.marginsGroupBoxChecked = marginsGroupBox->isChecked();
+    compare.topMarginSpinBoxValue = topMarginSpinBox->value();
+    compare.bottomMarginSpinBoxValue = bottomMarginSpinBox->value();
+    compare.leftMarginSpinBoxValue = leftMarginSpinBox->value();
+    compare.rightMarginSpinBoxValue  = rightMarginSpinBox->value();
+    compare.zoomSpinBoxValue = zoomSpinBox->value();
+    compare.filename1 = filename1LineEdit->text();
+    compare.filename2= filename2LineEdit->text();
+    compare.zoningGroupBoxChecked = zoningGroupBox->isChecked() ;
+    compare.compositionMode =
+            static_cast<QPainter::CompositionMode>(
+                showComboBox->itemData(showComboBox->currentIndex()).toInt());
+}
+
+*/

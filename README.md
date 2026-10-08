@@ -1,0 +1,201 @@
+# disparPDF
+
+PDF comparison tool — compares text or visual appearance of two PDF files.
+
+**disparPDF** is a Qt6 port of [ConfrontaPDF](https://github.com/lbellonda/ConfrontaPDF)
+by Luca Bellonda (2015), which is itself a fork of
+[DiffPDF](http://www.qtrac.eu/diffpdf-foss.html) by Mark Summerfield (2008–2013).
+
+This Qt6 port was created by Yuwsuke Kieda in 2026 with the assistance of AI tools
+(Claude by Anthropic).
+
+## Features
+
+- Compare two PDF files page by page (text or visual mode)
+- Word or character comparison
+- Page range specification
+- Batch/command line mode (`disparPDFc`)
+- Margin exclusion
+
+## Install via Homebrew tap (recommended)
+
+```sh
+brew tap yuw/disparPDF
+brew trust yuw/disparPDF
+brew install yuw/disparPDF/disparPDF
+```
+
+The `disparPDF` and `disparPDFc` commands work right away. To also have the
+app in `/Applications` (for Finder, Dock and Spotlight), copy it there yourself:
+
+```sh
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
+```
+
+macOS does not allow Homebrew to write into an existing app bundle in
+`/Applications` (App Management protection), so **repeat this command after
+every `brew upgrade`** — otherwise the Finder copy stays on the old version.
+Use `ditto`, not `cp -r`: with an existing bundle `cp -r` nests the new copy
+inside the old one instead of replacing it. `ditto` preserves the code
+signature, so no re-signing is needed.
+
+After installation:
+
+| Location | Description |
+|---|---|
+| `/Applications/disparPDF.app` | GUI app (Finder) |
+| `/opt/homebrew/opt/disparPDF/disparPDF.app` | Homebrew-managed copy |
+| `/opt/homebrew/bin/disparPDF` | CLI wrapper (launches GUI) |
+| `/opt/homebrew/bin/disparPDFc` | CLI batch mode |
+
+## Upgrading
+
+```sh
+brew update
+brew upgrade yuw/disparPDF/poppler-qt6 yuw/disparPDF/disparPDF
+```
+
+The `disparPDF` and `disparPDFc` commands are current as soon as this finishes.
+
+**If only `poppler-qt6` was upgraded**, rebuild disparPDF against the new
+bindings. Homebrew does not rebuild a formula when one of its dependencies is
+updated, so the binary would keep running against the previous Poppler:
+
+```sh
+brew reinstall yuw/disparPDF/disparPDF
+```
+
+**If you keep a copy in `/Applications`**, refresh it after every upgrade.
+macOS does not allow Homebrew to write into an existing app bundle there, so
+this step cannot be automated:
+
+```sh
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
+```
+
+To check what is installed, and to reclaim the disk space held by the
+superseded versions:
+
+```sh
+brew list --versions disparPDF poppler-qt6
+brew cleanup
+```
+
+## Migrating from manual install to Homebrew tap
+
+If you have previously built and installed disparPDF manually, follow these steps:
+
+```sh
+# 1. Install via Homebrew tap
+brew tap yuw/disparPDF
+brew trust yuw/disparPDF
+brew install yuw/disparPDF/disparPDF
+
+# 2. Verify the tap installation
+brew info yuw/disparPDF/disparPDF
+ls /opt/homebrew/bin/disparPDF
+ls /opt/homebrew/bin/disparPDFc
+
+# 3. Remove the manual install
+sudo rm -f /usr/local/bin/disparPDF
+sudo rm -f /usr/local/bin/disparPDFc
+sudo rm -rf /usr/local/disparPDF.app
+sudo rm -rf /Applications/disparPDF.app
+
+# 4. Copy to /Applications
+ditto /opt/homebrew/opt/disparpdf/disparPDF.app /Applications/disparPDF.app
+
+# 5. Verify
+open /Applications/disparPDF.app
+disparPDFc -b 2>&1 | head -1
+```
+
+## Build from source
+
+### Dependencies (macOS / Homebrew)
+
+Homebrew's `poppler` does not include Qt6 bindings.
+Use the `poppler-qt6.rb` formula in `packaging/homebrew/` to install via a local tap.
+
+```sh
+brew install qt@6
+
+mkdir -p ~/homebrew-disparPDF/Formula
+cp packaging/homebrew/poppler-qt6.rb ~/homebrew-disparPDF/Formula/
+cd ~/homebrew-disparPDF
+git init
+git add Formula/poppler-qt6.rb
+git commit -m "Add poppler-qt6 formula"
+cd -
+
+brew tap yuw/disparPDF ~/homebrew-disparPDF
+brew install yuw/disparPDF/poppler-qt6
+```
+
+### Build
+
+On macOS, CMake locates Homebrew's keg-only `qt@6` and `poppler-qt6` automatically,
+so no environment variables are needed:
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(sysctl -n hw.logicalcpu)
+```
+
+To use a Qt or Poppler installation elsewhere, pass it explicitly — an
+explicit `CMAKE_PREFIX_PATH` takes precedence over the auto-detected paths:
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="/path/to/qt6;/path/to/poppler-qt6"
+```
+
+### Install
+
+```sh
+# Install to /usr/local
+sudo cmake --install build --prefix /usr/local
+
+# Re-sign after install (required on macOS 26+)
+codesign --force --sign - /usr/local/disparPDF.app/Contents/MacOS/disparPDF
+
+# Optional: copy to /Applications (ditto replaces an existing bundle and
+# keeps the signature; cp -r would nest the new copy inside the old one)
+ditto /usr/local/disparPDF.app /Applications/disparPDF.app
+
+# Optional: add symlink for CLI use
+sudo ln -sf /usr/local/disparPDF.app/Contents/MacOS/disparPDF /usr/local/bin/disparPDF
+```
+
+## Usage
+
+### GUI
+
+```sh
+# Launch from Finder
+open /Applications/disparPDF.app
+
+# Launch with files from terminal
+disparPDF a.pdf b.pdf
+```
+
+### Command line (batch mode)
+
+```sh
+# Returns 0 if identical, non-0 if differences found
+disparPDFc -b a.pdf b.pdf
+
+# With description
+disparPDFc -b --outType=1 a.pdf b.pdf
+
+# XML output
+disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
+```
+
+## License
+
+GPL-2.0-or-later
+
+Copyright © 2026 Yuwsuke Kieda  
+Based on ConfrontaPDF © 2015 Luca Bellonda  
+Based on DiffPDF © 2008–2013 Qtrac Ltd. (Mark Summerfield)

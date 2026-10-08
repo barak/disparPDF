@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0">
-<defaultcodec>UTF-8</defaultcodec>
+<TS version="2.1">
 <context>
     <name>AboutForm</name>
     <message>
         <source>&lt;table border=0&gt;&lt;tr&gt;&lt;td width=90%&gt;&lt;b&gt;%1&lt;/a&gt; %2&lt;/b&gt; by Mark Summerfield&lt;/td&gt;&lt;td rowspan=3&gt;&lt;img align=right src=&quot;:/icon.png&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;tt&gt;&amp;lt;mark@qtrac.eu&amp;gt;&lt;/tt&gt;.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Copyright &amp;copy; 2008-13 &lt;a href=&quot;http://www.qtrac.eu&quot;&gt;Qtrac&lt;/a&gt; Ltd. All rights reserved.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Built with Qt %3 and Poppler %4.&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;hr&gt;&lt;p&gt;This program compares the text or the visual appearance of each page in two PDF files.&lt;hr&gt;&lt;p&gt;If you like %1 you might like my books:&lt;ul&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/gobook.html&quot;&gt;Programming in Go&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/aqpbook.html&quot;&gt;Advanced Qt Programming&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/py3book.html&quot;&gt;Programming in Python 3&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/pyqtbook.html&quot;&gt;Rapid GUI Programming with Python and Qt&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;I also provide training and consultancy in C++, Go, Python&amp;nbsp;2, Python&amp;nbsp;3, C++/Qt, and PyQt4.</source>
-        <translation>&lt;table border=0&gt;&lt;tr&gt;&lt;td width=90%&gt;&lt;b&gt;%1&lt;/a&gt; %2&lt;/b&gt; par Marc Summerfield&lt;/td&gt;&lt;td rowspan=3&gt;&lt;img align=right src=&quot;:/icon.png&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;tt&gt;&amp;lt;mark@qtrac.eu&amp;gt;&lt;/tt&gt;.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Copyright &amp;copy; 2008-13 &lt;a href=&quot;http://www.qtrac.eu&quot;&gt;Qtrac&lt;/a&gt; Ltd. Tous droits réservés.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Construit avec Qt %3 et Poppler %4.&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;hr&gt;&lt;p&gt;Ce programme compare page à page le texte ou l&apos;apparence visuelle de deux fichiers PDF.&lt;hr&gt;&lt;p&gt;Si vous appréciez %1 vous pourriez également apprécier mes livres:&lt;ul&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/gobook.html&quot;&gt;Programming in Go&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/aqpbook.html&quot;&gt;Advanced Qt Programming&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/py3book.html&quot;&gt;Programming in Python 3&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/pyqtbook.html&quot;&gt;Rapid GUI Programming with Python and Qt&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;J&apos;organise également des formations et propose des prestations de conseil en C++, Go, Python&amp;nbsp;2, Python&amp;nbsp;3, C++/Qt, and PyQt4.</translation>
+        <translation type="obsolete">&lt;table border=0&gt;&lt;tr&gt;&lt;td width=90%&gt;&lt;b&gt;%1&lt;/a&gt; %2&lt;/b&gt; par Marc Summerfield&lt;/td&gt;&lt;td rowspan=3&gt;&lt;img align=right src=&quot;:/icon.png&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;tt&gt;&amp;lt;mark@qtrac.eu&amp;gt;&lt;/tt&gt;.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Copyright &amp;copy; 2008-13 &lt;a href=&quot;http://www.qtrac.eu&quot;&gt;Qtrac&lt;/a&gt; Ltd. Tous droits réservés.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Construit avec Qt %3 et Poppler %4.&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;hr&gt;&lt;p&gt;Ce programme compare page à page le texte ou l&apos;apparence visuelle de deux fichiers PDF.&lt;hr&gt;&lt;p&gt;Si vous appréciez %1 vous pourriez également apprécier mes livres:&lt;ul&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/gobook.html&quot;&gt;Programming in Go&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/aqpbook.html&quot;&gt;Advanced Qt Programming&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/py3book.html&quot;&gt;Programming in Python 3&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/pyqtbook.html&quot;&gt;Rapid GUI Programming with Python and Qt&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;J&apos;organise également des formations et propose des prestations de conseil en C++, Go, Python&amp;nbsp;2, Python&amp;nbsp;3, C++/Qt, and PyQt4.</translation>
     </message>
     <message>
         <source>&lt;table&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=lightyellow&gt;&lt;i&gt;Anonymous Company&lt;/i&gt; &amp;mdash; funded the addition of the margin exclusion functionality&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;David Paleino&lt;/b&gt; &amp;mdash; Debian packager&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Dirk Loss&lt;/b&gt; &amp;mdash; creating Mac binaries&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Florian Heiderich &amp;mdash; suggested using composition modes for showing subtle differences&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Jasmin Blanchette&lt;/b&gt; &amp;mdash; the original idea and subsequent suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Liviu Andronic &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Paul Howarth &amp;mdash; suggestions resulting in Characters mode&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pavel Fric&lt;/i&gt; &amp;mdash; Czech translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pierre-Alain&lt;/i&gt; Bandinelli&amp;mdash; French translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Rainer Krachten&lt;/i&gt; &amp;mdash; German translation and various suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Rory Gordon &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Steven Lee&lt;/b&gt; &amp;mdash; creating Windows binaries&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</source>
@@ -33,11 +32,70 @@
         <translation type="obsolete">%1 — A propos</translation>
     </message>
     <message>
-        <source>&lt;table&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=lightyellow&gt;&lt;i&gt;Anonymous Company&lt;/i&gt; &amp;mdash; funded the addition of the margin exclusion functionality&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;David Paleino&lt;/b&gt; &amp;mdash; Debian packager&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Dirk Loss&lt;/b&gt; &amp;mdash; creating Mac binaries&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Florian Heiderich &amp;mdash; suggested using composition modes for showing subtle differences&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Jasmin Blanchette&lt;/b&gt; &amp;mdash; the original idea and subsequent suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Liviu Andronic &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Paul Howarth &amp;mdash; suggestions resulting in Characters mode&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pavel Fric&lt;/i&gt; &amp;mdash; Czech translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pierre-Alain Bandinelli&lt;/i&gt;&amp;mdash; French translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Rainer Krachten&lt;/i&gt; &amp;mdash; German translation and various suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Rory Gordon &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Steven Lee&lt;/b&gt; &amp;mdash; creating Windows binaries&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</source>
+        <source>%1 — About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 — About</source>
+        <source>&lt;table border=0&gt;&lt;tr&gt;&lt;td width=90%&gt;&lt;b&gt;%1&lt;/a&gt; %2&lt;/b&gt; by Mark Summerfield&lt;/td&gt;&lt;td rowspan=3&gt;&lt;img align=right src=&quot;:/icon.png&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;tt&gt;&amp;lt;mark@qtrac.eu&amp;gt;&lt;/tt&gt;.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Copyright &amp;copy; 2008-13 &lt;a href=&quot;http://www.qtrac.eu&quot;&gt;Qtrac&lt;/a&gt; Ltd. All rights reserved.&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan=2&gt;Built with Qt %3 and Poppler %4.&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;hr&gt;&lt;p&gt;This program compares the text or the visual appearance of each page in two PDF files.&lt;p&gt;This version can be used in batch operations.&lt;hr&gt;&lt;p&gt;If you like %1 you might like my books:&lt;ul&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/gobook.html&quot;&gt;Programming in Go&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/aqpbook.html&quot;&gt;Advanced Qt Programming&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/py3book.html&quot;&gt;Programming in Python 3&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://www.qtrac.eu/pyqtbook.html&quot;&gt;Rapid GUI Programming with Python and Qt&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;I also provide training and consultancy in C++, Go, Python&amp;nbsp;2, Python&amp;nbsp;3, C++/Qt, and PyQt4.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;table&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=lightyellow&gt;&lt;i&gt;Anonymous Company&lt;/i&gt; &amp;mdash; funded the addition of the margin exclusion functionality&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;David Paleino&lt;/b&gt; &amp;mdash; Debian packager&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Dirk Loss&lt;/b&gt; &amp;mdash; creating Mac binaries&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Florian Heiderich &amp;mdash; suggested using composition modes for showing subtle differences&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Jasmin Blanchette&lt;/b&gt; &amp;mdash; the original idea and subsequent suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Liviu Andronic &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Paul Howarth &amp;mdash; suggestions resulting in Characters mode&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pavel Fric&lt;/i&gt; &amp;mdash; Czech translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Pierre-Alain Bandinelli&lt;/i&gt;&amp;mdash; French translation&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td bgcolor=&quot;#F0F0F0&quot;&gt;&lt;i&gt;Rainer Krachten&lt;/i&gt; &amp;mdash; German translation and various suggestions&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Rory Gordon &amp;mdash; suggested adding drag and drop&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;Bryan Huh &amp;mdash; subtle bug fix&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Steven Lee&lt;/b&gt; &amp;mdash; creating Windows binaries&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&amp;bull;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Luca Bellonda&lt;/b&gt; &amp;mdash; batch processing feature&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>BatchCompare</name>
+    <message>
+        <source>Cannot load &apos;%1&apos;.</source>
+        <translation type="unfinished">Impossible de charger &apos;%1&apos;.</translation>
+    </message>
+    <message>
+        <source>Cannot read a locked PDF (&apos;%1&apos;).</source>
+        <translation type="unfinished">Impossible de lire un PDF verrouillé (&apos;%1&apos;).</translation>
+    </message>
+    <message>
+        <source>file: %1, start page greater than available pages</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>file: %1, final page is not existing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the number of pages is not the same on both the documents, doc1:%1, doc2:%2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to read page %1 from &apos;%2&apos;.</source>
+        <translation type="unfinished">Impossible de lire la page %1 dans &apos;%2&apos;.</translation>
+    </message>
+    <message>
+        <source>documents differ at page: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ConfrontaPDF %1 %2 vs. %3 %1 %4</source>
+        <translation type="obsolete">ConfrontaPDF %1 %2 vs. %3 %1 %4</translation>
+    </message>
+    <message>
+        <source>ConfrontaPDF</source>
+        <translation type="obsolete">ConfrontaPDF</translation>
+    </message>
+    <message>
+        <source>error while writing differences file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ConfrontaPDF: False Positive</source>
+        <translation type="obsolete">ConfrontaPDF : Faux positif</translation>
+    </message>
+    <message>
+        <source>%5 %1 %2 vs. %3 %1 %4</source>
+        <translation type="unfinished">%1 vs. %3 %1 %4 {5 %1 %2 ?}</translation>
+    </message>
+    <message>
+        <source>%1: False Positive</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -59,8 +117,8 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <source>DiffPDF</source>
-        <translation>DiffPDF</translation>
+        <source>ConfrontaPDF</source>
+        <translation type="obsolete">ConfrontaPDF</translation>
     </message>
     <message>
         <source>File #&amp;1...</source>
@@ -199,8 +257,8 @@
         <translation>Co&amp;lonnes :</translation>
     </message>
     <message>
-        <source>&lt;p&gt;Use this to tell DiffPDF how many columns the page has; this should improve the zoning.</source>
-        <translation>&lt;p&gt;Indique à DiffPDF combien de colonnes sont visibles sur la page ; cela améliore le découpage par zones.</translation>
+        <source>&lt;p&gt;Use this to tell ConfrontaPDF how many columns the page has; this should improve the zoning.</source>
+        <translation type="obsolete">&lt;p&gt;Indique à ConfrontaPDF combien de colonnes sont visibles sur la page ; cela améliore le découpage par zones.</translation>
     </message>
     <message>
         <source>Tolerance/&amp;R:</source>
@@ -343,52 +401,52 @@
         <translation>Messages</translation>
     </message>
     <message>
-        <source>DiffPDF ? Controls</source>
-        <translation type="obsolete">DiffPDF — Contrôles</translation>
+        <source>ConfrontaPDF ? Controls</source>
+        <translation type="obsolete">ConfrontaPDF — Contrôles</translation>
     </message>
     <message>
-        <source>DiffPDF ? Actions</source>
-        <translation type="obsolete">DiffPDF — Actions</translation>
+        <source>ConfrontaPDF ? Actions</source>
+        <translation type="obsolete">ConfrontaPDF — Actions</translation>
     </message>
     <message>
-        <source>DiffPDF ? Zoning</source>
-        <translation type="obsolete">DiffPDF — Découpage par zones</translation>
+        <source>ConfrontaPDF ? Zoning</source>
+        <translation type="obsolete">ConfrontaPDF — Découpage par zones</translation>
     </message>
     <message>
-        <source>DiffPDF ? Margins</source>
-        <translation type="obsolete">DiffPDF — Marges</translation>
+        <source>ConfrontaPDF ? Margins</source>
+        <translation type="obsolete">ConfrontaPDF — Marges</translation>
     </message>
     <message>
-        <source>DiffPDF ? Log</source>
-        <translation type="obsolete">DiffPDF — Messages</translation>
+        <source>ConfrontaPDF ? Log</source>
+        <translation type="obsolete">ConfrontaPDF — Messages</translation>
     </message>
     <message>
-        <source>DiffPDF: False Positive</source>
-        <translation>DiffPDF : Faux positif</translation>
+        <source>ConfrontaPDF: False Positive</source>
+        <translation type="obsolete">ConfrontaPDF : Faux positif</translation>
     </message>
     <message>
-        <source>DiffPDF ? Choose File #1</source>
-        <translation type="obsolete">DiffPDF — Choisir fichier #1</translation>
+        <source>ConfrontaPDF ? Choose File #1</source>
+        <translation type="obsolete">ConfrontaPDF — Choisir fichier #1</translation>
     </message>
     <message>
         <source>PDF files (*.pdf)</source>
         <translation>Fichiers PDF (*.pdf)</translation>
     </message>
     <message>
-        <source>DiffPDF ? Error</source>
-        <translation type="obsolete">DiffPDF — Erreur</translation>
+        <source>ConfrontaPDF ? Error</source>
+        <translation type="obsolete">ConfrontaPDF — Erreur</translation>
     </message>
     <message>
         <source>Cannot compare a file to itself.</source>
         <translation>Il n&apos;est pas possible de comparer un fichier à lui-même.</translation>
     </message>
     <message>
-        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF: Click Compare&lt;br&gt;or change File #2.&lt;/p&gt;</source>
-        <translation>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF: Cliquez sur Comparer&lt;br&gt; ou changez le fichier #2.&lt;/p&gt;</translation>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF: Click Compare&lt;br&gt;or change File #2.&lt;/p&gt;</source>
+        <translation type="obsolete">&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF: Cliquez sur Comparer&lt;br&gt; ou changez le fichier #2.&lt;/p&gt;</translation>
     </message>
     <message>
-        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF: Choose File #2.&lt;/p&gt;</source>
-        <translation>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF : Choisissez le fichier #2.&lt;/p&gt;</translation>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF: Choose File #2.&lt;/p&gt;</source>
+        <translation type="obsolete">&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF : Choisissez le fichier #2.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>1-%1</source>
@@ -403,16 +461,16 @@
         <translation>Prêt à comparer</translation>
     </message>
     <message>
-        <source>DiffPDF ? Choose File #2</source>
-        <translation type="obsolete">DiffPDF — Choisissez fichier #2</translation>
+        <source>ConfrontaPDF ? Choose File #2</source>
+        <translation type="obsolete">ConfrontaPDF — Choisissez fichier #2</translation>
     </message>
     <message>
-        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF: Click Compare&lt;br&gt;or change File #1.&lt;/p&gt;</source>
-        <translation>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF : Cliquez sur Comparer&lt;br&gt;ou modifiez le fichier #1.&lt;/p&gt;</translation>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF: Click Compare&lt;br&gt;or change File #1.&lt;/p&gt;</source>
+        <translation type="obsolete">&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF : Cliquez sur Comparer&lt;br&gt;ou modifiez le fichier #1.&lt;/p&gt;</translation>
     </message>
     <message>
-        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF: Choose File #1.&lt;/p&gt;</source>
-        <translation>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;DiffPDF : Choisissez fichier #1.&lt;/p&gt;</translation>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF: Choose File #1.&lt;/p&gt;</source>
+        <translation type="obsolete">&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;ConfrontaPDF : Choisissez fichier #1.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Choose first file</source>
@@ -511,8 +569,8 @@
         <translation>Les fichiers PDFs semblent identiques.</translation>
     </message>
     <message>
-        <source>&lt;p style=&apos;font-size: x-large;color: darkgreen&apos;&gt;DiffPDF: The PDFs appear to be the same.&lt;/p&gt;</source>
-        <translation>&lt;p style=&apos;font-size: x-large;color: dargreen&apos;&gt;DiffPDF : les fichiers PDFs semblent être identiques.&lt;/p&gt;</translation>
+        <source>&lt;p style=&apos;font-size: x-large;color: darkgreen&apos;&gt;ConfrontaPDF: The PDFs appear to be the same.&lt;/p&gt;</source>
+        <translation type="obsolete">&lt;p style=&apos;font-size: x-large;color: dargreen&apos;&gt;ConfrontaPDF : les fichiers PDFs semblent être identiques.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>1 differs %1/%2 compared</source>
@@ -527,12 +585,12 @@
         <translation type="obsolete">%1 diffère de %2 %3/%4 ont été comparées</translation>
     </message>
     <message>
-        <source>DiffPDF %1 %2 %1 %3</source>
-        <translation>DiffPDF %1 %2 %1 %3</translation>
+        <source>ConfrontaPDF %1 %2 %1 %3</source>
+        <translation type="obsolete">ConfrontaPDF %1 %2 %1 %3</translation>
     </message>
     <message>
-        <source>DiffPDF %1 %2 vs. %3 %1 %4</source>
-        <translation>DiffPDF %1 %2 vs. %3 %1 %4</translation>
+        <source>ConfrontaPDF %1 %2 vs. %3 %1 %4</source>
+        <translation type="obsolete">ConfrontaPDF %1 %2 vs. %3 %1 %4</translation>
     </message>
     <message>
         <source>Saved %1</source>
@@ -543,43 +601,79 @@
         <translation>Echec dans l&apos;enregistrement %1</translation>
     </message>
     <message>
-        <source>DiffPDF — Controls</source>
+        <source>&lt;p&gt;Use this to tell %1 how many columns the page has; this should improve the zoning.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Actions</source>
+        <source>%1 — Controls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Zoning</source>
+        <source>%1 — Actions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Margins</source>
+        <source>%1 — Zoning</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Log</source>
+        <source>%1 — Margins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Choose File #1</source>
+        <source>%1 — Log</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Error</source>
+        <source>%1: False Positive</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Choose File #2</source>
+        <source>%1 — Choose File #1</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 — Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;%1: Click Compare&lt;br&gt;or change File #2.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;%1: Choose File #2.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 — Choose File #2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;%1: Click Compare&lt;br&gt;or change File #1.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p style=&apos;font-size: xx-large;color: darkgreen&apos;&gt;%1: Choose File #1.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;p style=&apos;font-size: x-large;color: darkgreen&apos;&gt;%1: The PDFs appear to be the same.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%4 %1 %2 %1 %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%4 %1 %2 vs. %3 %1 %4</source>
+        <translation type="unfinished">%1 vs. %3 %1 %4 {4 %1 %2 ?}</translation>
     </message>
 </context>
 <context>
     <name>OptionsForm</name>
     <message>
-        <source>DiffPDF ? Options</source>
-        <translation type="obsolete">DiffPDF — Options</translation>
+        <source>ConfrontaPDF ? Options</source>
+        <translation type="obsolete">ConfrontaPDF — Options</translation>
     </message>
     <message>
         <source>No Brush</source>
@@ -719,7 +813,7 @@
     </message>
     <message>
         <source>&lt;p&gt;The outline and fill are used to highlight differences using a semi-transparent version of the base color. The margin rules are painted using the base color  and indicate where changes are. Set the rule width to 0.0 to switch the rules off. If combining highlighting is checked it will try to merge the highlighting of adjacent text differences.</source>
-        <translation>&lt;p&gt;Le contour et le remplissage sont utilisés pour mettre en évidence des différences en utilisant une version semi-transparente de la couleur de base. Les règles des marges sont peintes avec la couleur de base(sp)(sp)et indiquent l&apos;emplacement des changements. Choisissez une largeur des règles de 0.0 pour désactiver les règles. Si l&apos;option &apos;Combiner les surlignages adjacents&apos; est sélectionnée, DiffPDF essayera de fusionner les surlignages correspondant à des différences textuelles adjacentes.</translation>
+        <translation>&lt;p&gt;Le contour et le remplissage sont utilisés pour mettre en évidence des différences en utilisant une version semi-transparente de la couleur de base. Les règles des marges sont peintes avec la couleur de base(sp)(sp)et indiquent l&apos;emplacement des changements. Choisissez une largeur des règles de 0.0 pour désactiver les règles. Si l&apos;option &apos;Combiner les surlignages adjacents&apos; est sélectionnée, ConfrontaPDF essayera de fusionner les surlignages correspondant à des différences textuelles adjacentes.</translation>
     </message>
     <message>
         <source>&amp;Highlighting</source>
@@ -738,15 +832,66 @@
         <translation>&amp;Performance</translation>
     </message>
     <message>
-        <source>DiffPDF — Options</source>
+        <source>%1 — Options</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>QObject</name>
+    <message>
+        <source>documents are the same</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>command line parameter error :%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unexpected error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>documents differ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the number of pages is not the same on both the documents</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unable to load file 1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unable to load file 2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>unrecognized argument &apos;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>file 1 missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>file 2 missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>file: &apos;%1&apos;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error writing XML result file:%1</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>SaveForm</name>
     <message>
-        <source>DiffPDF ? Save As</source>
-        <translation type="obsolete">DiffPDF — Enregistrer sous</translation>
+        <source>ConfrontaPDF ? Save As</source>
+        <translation type="obsolete">ConfrontaPDF — Enregistrer sous</translation>
     </message>
     <message>
         <source>Pairs</source>
@@ -785,19 +930,19 @@
         <translation>Pa&amp;rcourir...</translation>
     </message>
     <message>
-        <source>DiffPDF ? Browse</source>
-        <translation type="obsolete">DiffPDF — Parcourir</translation>
+        <source>ConfrontaPDF ? Browse</source>
+        <translation type="obsolete">ConfrontaPDF — Parcourir</translation>
     </message>
     <message>
         <source>PDF files (*.pdf);;Image files (%1)</source>
         <translation>Fichiers PDF (*.pdf);;Fichiers images (%1)</translation>
     </message>
     <message>
-        <source>DiffPDF — Save As</source>
+        <source>%1 — Save As</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>DiffPDF — Browse</source>
+        <source>%1 — Browse</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

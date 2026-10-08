@@ -13,17 +13,25 @@
 */
 
 #include "generic.hpp"
+#include "pagecompare.h"
 #include "saveform.hpp"
 #if QT_VERSION >= 0x040600
-#include <QSharedPointer>
 #else
 #include <tr1/memory>
 #endif
-#include <poppler-qt5.h>
+#ifdef USE_QT6
+#  include <poppler-qt6.h>
+#else
+#  include <poppler-qt5.h>
+#endif
 #include <QBrush>
 #include <QList>
 #include <QMainWindow>
 #include <QPen>
+#include "startupparameters.h"
+#include "status.h"
+#include "compareresults.h"
+#include "batchcompare.h"
 
 class AboutForm;
 class HelpForm;
@@ -43,7 +51,7 @@ class QSpinBox;
 class QSplitter;
 
 
-class MainWindow : public QMainWindow
+class MainWindow : public QMainWindow, CompareNotifier
 {
     Q_OBJECT
 
@@ -51,11 +59,20 @@ public:
     MainWindow(const Debug debug,
             const InitialComparisonMode comparisonMode,
             const QString &filename1, const QString &filename2,
-            const QString &language, QWidget *parent=0);
+            const QString &language, StartupParameters *startupParameters,
+            Status *status, QWidget *parent=0);
+    void setOverrideCursor();
+    void setRestoreCursor();
+    void processEvents();
+    void setStatusLabel(const QString &text);
+    void messageBox(const QString &text);
 
 protected:
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *object, QEvent *event);
+    QString finalFileName(const QString &filename);
+    DocInfo *docInfo(const PdfDocument &pdf, const QString &fileName);
+    //void initCompareParams(BatchCompare &compare);
 
 private slots:
     void setFile1(QString filename=QString());
@@ -86,8 +103,6 @@ private slots:
     void setAMargin(const QPoint &pos);
 
 private:
-    enum Difference {NoDifference, TextualDifference, VisualDifference};
-
     void createWidgets(const QString &filename1, const QString &filename2);
     void createCentralArea();
     void createDockWidgets();
@@ -101,8 +116,7 @@ private:
     void writeLine(const QString &text);
     void writeError(const QString &text);
     PdfDocument getPdf(const QString &filename);
-    QList<int> getPageList(int which, PdfDocument pdf);
-    Difference getTheDifference(PdfPage page1, PdfPage page2);
+    QList<int> getPageList(int which, const PdfDocument &pdf);
     void paintOnImage(const QPainterPath &path, QImage *image);
     const QPair<QPixmap, QPixmap> populatePixmaps(const PdfDocument &pdf1,
             const PdfPage &page1, const PdfDocument &pdf2,
@@ -127,13 +141,11 @@ private:
             const PdfDocument &pdf2, const QString &header);
     bool paintSaveAs(QPainter *painter, const int index,
             const PdfDocument &pdf1, const PdfDocument &pdf2,
-            const QString &header, const QRect &rect,
-            const QRect &leftRect, const QRect &rightRect);
+            const QString &header, const QRectF &rect,
+            const QRectF &leftRect, const QRectF &rightRect);
     void saveAsImages(const int start, const int end,
             const PdfDocument &pdf1, const PdfDocument &pdf2,
             const QString &header);
-    void computeImageOffsets(const QSize &size, int *x, int *y,
-            int *width, int *height);
     QRectF pointRectForMargins(const QSize &size);
     QRect pixelRectForMargins(const QSize &size);
 
@@ -204,7 +216,7 @@ private:
     Qt::DockWidgetArea marginsDockArea;
     Qt::DockWidgetArea zoningDockArea;
     Qt::DockWidgetArea logDockArea;
-    bool cancel;
+    std::atomic<bool> cancel;
     bool showToolTips;
     bool combineTextHighlighting;
     QString saveFilename;
@@ -214,6 +226,10 @@ private:
     Debug debug;
     AboutForm *aboutForm;
     HelpForm *helpForm;
+    StartupParameters *_startupParameters;
+    Status *_status;
+    int currentCompareIndex;
+    int currentShowCompareIndex;
 };
 
 #endif // MAINWINDOW_HPP

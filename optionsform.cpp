@@ -12,6 +12,7 @@
 
 #include "generic.hpp"
 #include "optionsform.hpp"
+#include "aboutform.hpp"
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
@@ -42,25 +43,29 @@ OptionsForm::OptionsForm(QPen *pen, QBrush *brush, qreal *ruleWidth,
 
     updateSwatches();
     updateUi();
-    setWindowTitle(tr("DiffPDF — Options"));
+    setWindowTitle(tr("%1 — Options").arg(AboutForm::ProgramName));
 }
 
 
 void OptionsForm::createWidgets()
 {
     colorComboBox = new QComboBox;
-    foreach (const QString &name, QColor::colorNames()) {
-        QColor color(name);
-        colorComboBox->addItem(colorSwatch(color), name, color);
+    {
+        const QStringList colorNames = QColor::colorNames();
+        for (const QString &name : colorNames) {
+            QColor color(name);
+            colorComboBox->addItem(colorSwatch(color), name, QVariant::fromValue(color));
+        }
     }
-    colorComboBox->setCurrentIndex(colorComboBox->findData(pen.color()));
+    colorComboBox->setCurrentIndex(colorComboBox->findData(QVariant::fromValue(pen.color())));
 
     QColor color = pen.color();
     color.setAlphaF(*m_alpha / 100.0);
 
     brushStyleComboBox = new QComboBox;
+    {
     typedef QPair<QString, Qt::BrushStyle> BrushPair;
-    foreach (const BrushPair &pair, QList<BrushPair>()
+    const QList<BrushPair> brushPairs = QList<BrushPair>()
             << qMakePair(tr("No Brush"), Qt::NoBrush)
             << qMakePair(tr("Solid"), Qt::SolidPattern)
             << qMakePair(tr("Dense #1"), Qt::Dense1Pattern)
@@ -74,25 +79,30 @@ void OptionsForm::createWidgets()
             << qMakePair(tr("Cross"), Qt::CrossPattern)
             << qMakePair(tr("Diagonal /"), Qt::BDiagPattern)
             << qMakePair(tr("Diagonal \\"), Qt::FDiagPattern)
-            << qMakePair(tr("Diagonal Cross"), Qt::DiagCrossPattern))
+            << qMakePair(tr("Diagonal Cross"), Qt::DiagCrossPattern);
+    for (const BrushPair &pair : brushPairs)
         brushStyleComboBox->addItem(brushSwatch(pair.second, color),
-                                                pair.first, QBrush(pair.second));
+                                                pair.first, static_cast<int>(pair.second));
     brushStyleComboBox->setCurrentIndex(brushStyleComboBox->findData(
-                QBrush(brush.style())));
+                static_cast<int>(brush.style())));
+    }
 
     penStyleComboBox = new QComboBox;
+    {
     typedef QPair<QString, Qt::PenStyle> PenPair;
-    foreach (const PenPair &pair, QList<PenPair>()
+    const QList<PenPair> penPairs = QList<PenPair>()
             << qMakePair(tr("No Pen"), Qt::NoPen)
             << qMakePair(tr("Solid"), Qt::SolidLine)
             << qMakePair(tr("Dashed"), Qt::DashLine)
             << qMakePair(tr("Dotted"), Qt::DotLine)
             << qMakePair(tr("Dash-Dotted"), Qt::DashDotLine)
-            << qMakePair(tr("Dash-Dot-Dotted"), Qt::DashDotDotLine))
+            << qMakePair(tr("Dash-Dot-Dotted"), Qt::DashDotDotLine);
+    for (const PenPair &pair : penPairs)
         penStyleComboBox->addItem(penStyleSwatch(pair.second, color),
-                                  pair.first, QBrush(pair.second));
+                                  pair.first, static_cast<int>(pair.second));
     penStyleComboBox->setCurrentIndex(penStyleComboBox->findData(
-                QBrush(pen.style())));
+                static_cast<int>(pen.style())));
+    }
 
     alphaSpinBox = new QSpinBox;
     alphaSpinBox->setRange(1, 100);
@@ -186,20 +196,20 @@ void OptionsForm::createLayout()
 
 void OptionsForm::createConnections()
 {
-    connect(colorComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &OptionsForm::updateColor);
-    connect(penStyleComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &OptionsForm::updatePenStyle);
-    connect(penStyleComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &OptionsForm::updateUi);
-    connect(brushStyleComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &OptionsForm::updateBrushStyle);
-    connect(brushStyleComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, &OptionsForm::updateUi);
-    connect(alphaSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            this, &OptionsForm::updateSwatches);
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &OptionsForm::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(colorComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateColor(int)));
+    connect(penStyleComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updatePenStyle(int)));
+    connect(penStyleComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateUi()));
+    connect(brushStyleComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateBrushStyle(int)));
+    connect(brushStyleComboBox, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(updateUi()));
+    connect(alphaSpinBox, SIGNAL(valueChanged(int)),
+            this, SLOT(updateSwatches()));
+    connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+    connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 }
 
 

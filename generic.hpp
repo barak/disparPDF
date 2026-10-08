@@ -11,8 +11,13 @@
     FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
     for more details.
 */
-
-#include <poppler-qt5.h>
+#include <memory>
+#include <vector>
+#ifdef USE_QT6
+#  include <poppler-qt6.h>
+#else
+#  include <poppler-qt5.h>
+#endif
 #include <QMetaType>
 #include <QPair>
 #include <QPixmap>
@@ -22,22 +27,21 @@ class QColor;
 class QMimeData;
 class QRectF;
 
-#if QT_VERSION >= 0x040600
-typedef QSharedPointer<Poppler::Document> PdfDocument;
-typedef QSharedPointer<Poppler::Page> PdfPage;
-typedef QSharedPointer<Poppler::TextBox> PdfTextBox;
-#else
-typedef std::tr1::shared_ptr<Poppler::Document> PdfDocument;
-typedef std::tr1::shared_ptr<Poppler::Page> PdfPage;
-typedef std::tr1::shared_ptr<Poppler::TextBox> PdfTextBox;
-#endif
-typedef QList<PdfTextBox> TextBoxList;
+// Qt6 Poppler: Document::load() / Page::page() return unique_ptr
+typedef std::unique_ptr<Poppler::Document> PdfDocument;
+// Document::page() also returns unique_ptr: the caller owns the Page
+// (it is not owned by the Document), so keep it in a shared_ptr
+typedef std::shared_ptr<Poppler::Page> PdfPage;
+// Qt6 Poppler: textList() returns vector<unique_ptr<TextBox>>
+typedef std::unique_ptr<Poppler::TextBox> PdfTextBox;
+typedef std::vector<PdfTextBox> TextBoxList;
 
 enum InitialComparisonMode{CompareAppearance=0, CompareCharacters=1,
                            CompareWords=2};
 
 enum Debug{DebugOff, DebugShowTexts, DebugShowTextsAndYX};
 
+// note: this should be a parameter
 const int POINTS_PER_INCH = 72;
 
 typedef QSet<int> Ranges;
@@ -50,9 +54,9 @@ struct PagePair
 
     bool isNull() { return left == -1 || right == -1; }
 
-    const int left;
-    const int right;
-    const bool hasVisualDifference;
+    int left;
+    int right;
+    bool hasVisualDifference;
 };
 Q_DECLARE_METATYPE(PagePair)
 
@@ -62,8 +66,8 @@ inline const QChar canonicalizedCharacter(const QChar &in)
     QChar out = in;
     const ushort c = in.unicode();
     switch (c) {
-        case 0x93:   out = QChar(0x201C); break; // “
-        case 0x94:   out = QChar(0x201D); break; // ”
+        case 0x93:   out = QChar(0x201C); break; // "
+        case 0x94:   out = QChar(0x201D); break; // "
         case 0xAD:   // fallthrough (soft-hyphen)
         case 0x2D:   // fallthrough (hyphen-minus)
         case 0x2010: // fallthrough (hyphen)
@@ -89,15 +93,6 @@ const TextBoxList getTextBoxes(PdfPage page, const QRectF &rect=QRect());
 
 const QString strippedFilename(const QString &filename);
 const QStringList droppedFilenames(const QMimeData *mimeData);
-const QRect resizeRect(const QRect &pageRect, const QSize &pixmapSize);
-
-/* // Not needed
-const int roundedToNearest(const int x, const int multiple)
-{
-    Q_ASSERT(multiple)
-    const int remainder = x % multiple;
-    return (remainder == 0) ? x : x + multiple - remainder;
-}
-*/
+const QRectF resizeRect(const QRectF &pageRect, const QSize &pixmapSize);
 
 #endif // GENERIC_HPP
