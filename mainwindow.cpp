@@ -1436,6 +1436,10 @@ const QPair<int, int> MainWindow::comparePages(const QString &filename1,
     options.bottomMargin = bottomMarginSpinBox->value();
     options.leftMargin = leftMarginSpinBox->value();
     options.rightMargin = rightMarginSpinBox->value();
+    // 0 keeps one comparison worker per core; a positive value caps them,
+    // which also caps peak memory, since every worker opens its own pair
+    // of documents.  There is no GUI control: set it in the settings file.
+    options.maxWorkers = QSettings().value("CompareThreads", 0).toInt();
     const QVector<PagePairResult> results = comparePagesInParallel(
             filename1, pdf1, pages1, filename2, pdf2, pages2, options,
             &cancel, [this, total](int done) {

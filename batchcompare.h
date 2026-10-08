@@ -144,6 +144,7 @@ public:
     int leftMarginSpinBoxValue;
     int rightMarginSpinBoxValue;
     int cacheSizeMB;
+    int compareThreads;
 
     int zoomSpinBoxValue;
     QString filename1;

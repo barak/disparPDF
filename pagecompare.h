@@ -1,6 +1,7 @@
 #ifndef PAGECOMPARE_H
 #define PAGECOMPARE_H
 /*
+    Copyright © 2026 Barak A. Pearlmutter. All rights reserved.
     This program or module is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation, either version 2 of
@@ -31,6 +32,10 @@ struct PageCompareOptions
     int bottomMargin = 0;
     int leftMargin = 0;
     int rightMargin = 0;
+    // Upper bound on worker threads; 0 means one per core.  Each worker
+    // holds its own pair of open documents, so peak memory grows with
+    // this number: lower it on machines with many cores and little RAM.
+    int maxWorkers = 0;
 };
 
 struct PagePairResult
@@ -44,9 +49,10 @@ PageDifference comparePagePair(const PdfPage &page1, const PdfPage &page2,
                                const PageCompareOptions &options);
 
 // Compares page pages1[i] of pdf1 with page pages2[i] of pdf2, for each i,
-// using one worker thread per core.  A Poppler document must not be
-// rendered from several threads at once, so each worker loads its own
-// copies of the two files (with the same render hints as pdf1 and pdf2).
+// using one worker thread per core, or options.maxWorkers if that is set.
+// A Poppler document must not be rendered from several threads at once,
+// so each worker loads its own copies of the two files (with the same
+// render hints as pdf1 and pdf2).
 // Results are returned in page order.  If progress is set it is called on
 // the calling thread, with the number of pairs compared so far, every
 // 50 ms or so until the comparison is complete; it may process events.

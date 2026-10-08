@@ -1,4 +1,5 @@
 /*
+    Copyright © 2026 Barak A. Pearlmutter. All rights reserved.
     This program or module is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation, either version 2 of
@@ -58,16 +59,31 @@ PageDifference comparePagePair(const PdfPage &page1, const PdfPage &page2,
 }
 
 
+// Every Poppler::Document::RenderHint, listed explicitly rather than
+// walked by bit-shifting: that assumed the hints occupy consecutive bits
+// and that HideAnnotations is the highest one, so a hint added above it
+// would have been copied silently.  Add new hints here.
+static const Poppler::Document::RenderHint AllRenderHints[] = {
+    Poppler::Document::Antialiasing,
+    Poppler::Document::TextAntialiasing,
+    Poppler::Document::TextHinting,
+    Poppler::Document::TextSlightHinting,
+    Poppler::Document::OverprintPreview,
+    Poppler::Document::ThinLineSolid,
+    Poppler::Document::ThinLineShape,
+    Poppler::Document::IgnorePaperColor,
+    Poppler::Document::HideAnnotations,
+};
+
+
 static PdfDocument loadCopy(const QString &filename, const PdfDocument &model)
 {
     PdfDocument pdf(Poppler::Document::load(filename));
     if (!pdf || pdf->isLocked())
         return PdfDocument();
-    for (int bit = Poppler::Document::Antialiasing;
-         bit <= Poppler::Document::HideAnnotations; bit <<= 1) {
-        const auto hint = static_cast<Poppler::Document::RenderHint>(bit);
-        pdf->setRenderHint(hint, model->renderHints().testFlag(hint));
-    }
+    const Poppler::Document::RenderHints hints = model->renderHints();
+    for (const Poppler::Document::RenderHint hint : AllRenderHints)
+        pdf->setRenderHint(hint, hints.testFlag(hint));
     return pdf;
 }
 
@@ -113,8 +129,32 @@ QVector<PagePairResult> comparePagesInParallel(
         }
     };
 
-    const int workers = qBound(1, QThread::idealThreadCount(), qMax(total, 1));
+    int wanted = QThread::idealThreadCount();
+    if (options.maxWorkers > 0)
+        wanted = qMin(wanted, options.maxWorkers);
+    const int workers = qBound(1, wanted, qMax(total, 1));
     QList<QFuture<void>> futures;
+    // The workers write through references to results, next and done, so
+    // none of them may still be running once this function returns.  The
+    // explicit wait at the end does that on the normal path and reports
+    // the first exception, but it is skipped when a worker or progress()
+    // throws, so the wait has to happen while unwinding as well.
+    struct WaitForAll
+    {
+        QList<QFuture<void>> &futures;
+        ~WaitForAll()
+        {
+            for (QFuture<void> &future : futures) {
+                try {
+                    future.waitForFinished();
+                } catch (...) {
+                    // Either we are already unwinding, or the loop below
+                    // has reported this one: there is nothing to do but
+                    // let every worker stop.
+                }
+            }
+        }
+    } waitForAll{futures};
     for (int i = 0; i < workers; ++i)
         futures.append(QtConcurrent::run(worker));
     if (progress) {

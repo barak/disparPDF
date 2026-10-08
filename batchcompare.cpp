@@ -78,6 +78,10 @@ void BatchCompare::readFromSettings()
     topMarginSpinBoxValue = settings.value("Margins/Top", 0).toInt();
     bottomMarginSpinBoxValue = settings.value("Margins/Bottom", 0).toInt();
     cacheSizeMB = settings.value("CacheSizeMB", 25).toInt();
+    // 0 keeps one comparison worker per core; a positive value caps them,
+    // which also caps peak memory, since every worker opens its own pair
+    // of documents.  There is no GUI control: set it in the settings file.
+    compareThreads = settings.value("CompareThreads", 0).toInt();
     compositionMode = static_cast<QPainter::CompositionMode>(settings.value("compositionMode", -1).toInt()) ;
     squareSize = settings.value("SquareSize", squareSize).toInt();
     ruleWidth = settings.value("RuleWidth", ruleWidth).toDouble();
@@ -145,6 +149,7 @@ void BatchCompare::initValues()
     topMarginSpinBoxValue = 0;
     bottomMarginSpinBoxValue = 0;
     cacheSizeMB = 25;
+    compareThreads = 0;
     compositionMode = static_cast<QPainter::CompositionMode>(-1) ;
     overlap = 5 ;
     combineTextHighlighting = true ;
@@ -460,6 +465,7 @@ void BatchCompare::comparePagesBatch(
     options.bottomMargin = bottomMarginSpinBoxValue;
     options.leftMargin = leftMarginSpinBoxValue;
     options.rightMargin = rightMarginSpinBoxValue;
+    options.maxWorkers = compareThreads;
     const QVector<PagePairResult> pairResults = comparePagesInParallel(
             filename1, pdf1, pages1, filename2, pdf2, pages2, options);
     for (int i = 0; i < pairResults.count(); ++i) {
