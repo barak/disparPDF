@@ -10,9 +10,12 @@
 
 - 2つのPDFをページ単位で比較（テキストモード・外観モード）
 - 単語単位・文字単位の比較
-- ページ範囲の指定
-- バッチ・コマンドラインモード（`disparPDFc`）
+- ページ範囲の指定と，一方の文書にだけページがある場合のページオフセット
 - マージン除外
+- フォントの比較（`--compareFonts`）
+- コアごとに1スレッドでのページの並列比較
+- バッチ・コマンドラインモード（`disparPDFc`）．`--interactive`でウィンドウも表示できる
+- manページ（`man disparPDF`）とbash／zshの補完
 
 ## Homebrewによるインストール（推奨）
 
@@ -146,6 +149,17 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="/path/to/qt6;/path/to/poppler-qt6"
 ```
 
+### テスト
+
+テストは小さなPDFに対してバッチモードを実行するもので，ディスプレイを必要としません:
+
+```sh
+ctest --test-dir build
+```
+
+内容は`test/CMakeLists.txt`に記述されています．テストを含めない場合は
+`-DBUILD_TESTING=OFF`を指定して構成します．
+
 ### インストール
 
 ```sh
@@ -163,6 +177,15 @@ ditto /usr/local/disparPDF.app /Applications/disparPDF.app
 # CLIから呼び出せるようにシンボリックリンクを作成（任意）
 sudo ln -sf /usr/local/disparPDF.app/Contents/MacOS/disparPDF /usr/local/bin/disparPDF
 ```
+
+LinuxとBSDでは`cmake --install`がmanページ（`man disparPDF`または
+`man disparPDFc`），bashとzshの補完（置き場所は`BASH_COMPLETION_DIR`と
+`ZSH_COMPLETION_DIR`で指定できます），アプリケーションメニュー用のdesktop
+ファイルとアイコン，READMEもインストールします．パッケージ作成時は`DESTDIR`と
+通常の`CMAKE_INSTALL_*`ディレクトリが使えます．manページは`--help`の出力から
+`help2man`が生成します．`help2man`がない場合やクロスコンパイル時は`doc_man/`に
+あるコピーがインストールされます（このコピーは
+`cmake --build build --target update-manpage`で更新します）．
 
 ## 使い方
 

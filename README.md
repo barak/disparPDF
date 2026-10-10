@@ -13,9 +13,14 @@ This Qt6 port was created by Yuwsuke Kieda in 2026 with the assistance of AI too
 
 - Compare two PDF files page by page (text or visual mode)
 - Word or character comparison
-- Page range specification
-- Batch/command line mode (`disparPDFc`)
+- Page range specification, and a page offset for when one document has
+  pages the other does not
 - Margin exclusion
+- Font comparison (`--compareFonts`)
+- Pages compared in parallel, one worker thread per core
+- Batch/command line mode (`disparPDFc`), which can also show the window
+  with `--interactive`
+- Manual page (`man disparPDF`) and bash/zsh completion
 
 ## Install via Homebrew tap (recommended)
 
