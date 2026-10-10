@@ -8,10 +8,6 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 %:
 	dh $@
 
-# The test PDFs, which quilt patches cannot carry (see README.source)
-execute_before_dh_auto_configure:
-	cp --verbose debian/test-data/*.pdf test/data/
-
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DZSH_COMPLETION_DIR=/usr/share/zsh/vendor-completions

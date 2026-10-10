@@ -7,16 +7,4 @@ version numbers restart, hence the epoch; the source package keeps the
 name diffpdf, and the binary package diffpdf is a transitional package
 for disparpdf.
 
-debian/patches are commits not yet in a disparPDF release, from the
-disparpdf-fixes-and-features branch of https://github.com/barak/disparPDF
-(offered upstream), exported with gbp pq.  Quilt patches cannot add
-binary files, so the PDFs that the tests use, test/data/*.pdf, are left
-out of the patches and kept in debian/test-data (listed in
-debian/source/include-binaries); debian/rules copies them into place.
-Drop debian/test-data once upstream has them.
-
-Beware a textconv diff driver for PDFs in your git configuration (e.g.,
-diff.pdf.textconv = pdftotext): format-patch, and so gbp pq export,
-applies it, turning added PDFs into their text.
-
- -- Barak A. Pearlmutter <bap@debian.org>, Thu, 08 Oct 2026 13:00:00 +0100
+ -- Barak A. Pearlmutter <bap@debian.org>, Sat, 10 Oct 2026 10:03:32 +0100
