@@ -14,16 +14,9 @@
 
 #include "generic.hpp"
 #include "pagecompare.h"
+#include "renderer.h"
 #include "saveform.hpp"
-#if QT_VERSION >= 0x040600
-#else
-#include <tr1/memory>
-#endif
-#ifdef USE_QT6
-#  include <poppler-qt6.h>
-#else
-#  include <poppler-qt5.h>
-#endif
+#include <poppler-qt6.h>
 #include <QBrush>
 #include <QList>
 #include <QMainWindow>
@@ -48,10 +41,11 @@ class QPushButton;
 class QRadioButton;
 class QScrollArea;
 class QSpinBox;
+class QToolButton;
 class QSplitter;
 
 
-class MainWindow : public QMainWindow, CompareNotifier
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -61,18 +55,12 @@ public:
             const QString &filename1, const QString &filename2,
             const QString &language, StartupParameters *startupParameters,
             Status *status, QWidget *parent=0);
-    void setOverrideCursor();
-    void setRestoreCursor();
-    void processEvents();
-    void setStatusLabel(const QString &text);
-    void messageBox(const QString &text);
 
 protected:
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *object, QEvent *event);
     QString finalFileName(const QString &filename);
     DocInfo *docInfo(const PdfDocument &pdf, const QString &fileName);
-    //void initCompareParams(BatchCompare &compare);
 
 private slots:
     void setFile1(QString filename=QString());
@@ -98,6 +86,7 @@ private slots:
     void logTopLevelChanged(bool floating);
     void previousPages();
     void nextPages();
+    void offsetChanged(int offset);
     void showZones();
     void showMargins();
     void setAMargin(const QPoint &pos);
@@ -107,58 +96,49 @@ private:
     void createCentralArea();
     void createDockWidgets();
     void createConnections();
+    void runComparison(const bool verbose, const int pairIndexToShow);
     const QPair<int, int> comparePages(const QString &filename1,
             const PdfDocument &pdf1, const QString &filename2,
-            const PdfDocument &pdf2);
+            const PdfDocument &pdf2, const bool verbose);
     void comparePrepareUi();
-    void compareUpdateUi(const QPair<int, int> &pair, const int millisec);
+    void compareUpdateUi(const QPair<int, int> &pair, const int millisec,
+            const int pairIndexToShow);
+    void forgetComparison();
+    PagePair pairAt(const int pairIndex) const;
+    bool isComparedPair(const int pairIndex) const;
+    void showPair(const int pairIndex);
+    int differingPairNear(const int pairIndex, const bool after) const;
+    void stepPage(const int which, const int delta);
+    QString pdfFileFilter() const;
     int writeFileInfo(const QString &filename);
     void writeLine(const QString &text);
     void writeError(const QString &text);
     PdfDocument getPdf(const QString &filename);
+    RenderSettings renderSettings() const;
     QList<int> getPageList(int which, const PdfDocument &pdf);
-    void paintOnImage(const QPainterPath &path, QImage *image);
-    const QPair<QPixmap, QPixmap> populatePixmaps(const PdfDocument &pdf1,
-            const PdfPage &page1, const PdfDocument &pdf2,
-            const PdfPage &page2, bool hasVisualDifference,
-            const QString &key1, const QString &key2);
-    void computeTextHighlights(QPainterPath *highlighted1,
-            QPainterPath *highlighted2, const PdfPage &page1,
-            const PdfPage &page2, const int DPI);
-    void computeVisualHighlights(QPainterPath *highlighted1,
-        QPainterPath *highlighted2, const QImage &plainImage1,
-        const QImage &plainImage2);
-    void addHighlighting(QRectF *bigRect, QPainterPath *highlighted,
-            const QRectF wordOrCharRect, const int OVERLAP, const int DPI,
-            const bool COMBINE=true);
-    const QPair<QString, QString> cacheKeys(const int index,
-            const PagePair &pair) const;
-    const TextBoxList zoneYxOrdered(const TextBoxList &list);
     void showZones(const int Width, const TextBoxList &list,
             QLabel *label);
     void showMargins(QLabel *label);
     void saveAsPdf(const int start, const int end, const PdfDocument &pdf1,
             const PdfDocument &pdf2, const QString &header);
-    bool paintSaveAs(QPainter *painter, const int index,
-            const PdfDocument &pdf1, const PdfDocument &pdf2,
-            const QString &header, const QRectF &rect,
-            const QRectF &leftRect, const QRectF &rightRect);
     void saveAsImages(const int start, const int end,
             const PdfDocument &pdf1, const PdfDocument &pdf2,
             const QString &header);
-    QRectF pointRectForMargins(const QSize &size);
-    QRect pixelRectForMargins(const QSize &size);
 
     QPushButton *setFile1Button;
     LineEdit *filename1LineEdit;
     QLabel *comparePages1Label;
     QLineEdit *pages1LineEdit;
+    QToolButton *previousPage1Button;
+    QToolButton *nextPage1Button;
     Label *page1Label;
     QScrollArea *area1;
     QPushButton *setFile2Button;
     LineEdit *filename2LineEdit;
     QLabel *comparePages2Label;
     QLineEdit *pages2LineEdit;
+    QToolButton *previousPage2Button;
+    QToolButton *nextPage2Button;
     Label *page2Label;
     QScrollArea *area2;
     QComboBox *compareComboBox;
@@ -169,6 +149,8 @@ private:
     QPushButton *previousButton;
     QPushButton *nextButton;
     QLabel *statusLabel;
+    QLabel *offsetLabel;
+    QSpinBox *offsetSpinBox;
     QLabel *zoomLabel;
     QSpinBox *zoomSpinBox;
     QLabel *showLabel;
@@ -217,6 +199,18 @@ private:
     Qt::DockWidgetArea zoningDockArea;
     Qt::DockWidgetArea logDockArea;
     std::atomic<bool> cancel;
+    // Page fingerprints, kept between comparisons
+    PageFingerprintCache fingerprints;
+    // The last comparison: page pairIndex of comparedPages1 was paired with
+    // page pairIndex + comparedOffset of comparedPages2, with the result
+    // pairDifference[pairIndex] (-1 if not compared)
+    QList<int> comparedPages1;
+    QList<int> comparedPages2;
+    int comparedOffset = 0;
+    QVector<int> pairDifference;
+    int viewedPairIndex = -1; // -1 if none
+    QString comparisonSummary; // e.g., "3 differ 10/10 compared"
+    bool requirePdfExtension; // only offer files named *.pdf
     bool showToolTips;
     bool combineTextHighlighting;
     QString saveFilename;
@@ -229,7 +223,6 @@ private:
     StartupParameters *_startupParameters;
     Status *_status;
     int currentCompareIndex;
-    int currentShowCompareIndex;
 };
 
 #endif // MAINWINDOW_HPP

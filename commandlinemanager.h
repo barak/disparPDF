@@ -13,16 +13,8 @@
 #ifndef COMMANDLINEMANAGER_H
 #define COMMANDLINEMANAGER_H
 
-#if QT_VERSION >= 0x040600
 #include <QSharedPointer>
-#else
-#include <tr1/memory>
-#endif
-#ifdef USE_QT6
-#  include <poppler-qt6.h>
-#else
-#  include <poppler-qt5.h>
-#endif
+#include <poppler-qt6.h>
 #include <QBrush>
 #include <QList>
 #include <QPen>
@@ -39,7 +31,6 @@ class CommandLineManager : public CompareNotifier
 public:
     CommandLineManager(const Debug debug,
                        const InitialComparisonMode comparisonMode,
-                       const QString &filename1, const QString &filename2,
                        StartupParameters *startupParameters, Status *status);
     ~CommandLineManager();
 

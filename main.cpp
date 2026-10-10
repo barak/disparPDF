@@ -12,6 +12,7 @@
 
 #include "mainwindow.hpp"
 #include <QApplication>
+#include <QFileInfo>
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QLocale>
@@ -22,9 +23,45 @@
 #include "batchcompare.h"
 #include "commandlinemanager.h"
 
+// Run as disparPDFc (e.g., through a link to disparPDF, or a copy of it,
+// with that name), the program is always in batch mode.  The name it was
+// run by is taken from argv[0]: QCoreApplication::applicationFilePath()
+// resolves symbolic links, so would always give disparPDF.
+static bool runAsConsole(const char *argv0)
+{
+    QString name = QFileInfo(QString::fromLocal8Bit(argv0)).fileName();
+    if (name.endsWith(".exe", Qt::CaseInsensitive))
+        name.chop(4);
+    return name.compare("disparPDFc", Qt::CaseInsensitive) == 0;
+}
+
 int main(int argc, char *argv[])
 {
+    const bool console = argc > 0 && runAsConsole(argv[0]);
+    // The name of this program, for --help and --version
+    const char *const CommandName = console ? "disparPDFc" : "disparPDF";
     StartupParameters startupParameters;
+    // Batch mode and --help show no window, so they should work without a
+    // display: use Qt's offscreen platform for them unless one was chosen
+    // (the last of --batch and --interactive wins)
+    bool batch = console;
+    bool helpOrVersion = false;
+    bool platformGiven = !qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+    for (int i = 1; i < argc; ++i) {
+        const QByteArray arg(argv[i]);
+        if (arg == "--")
+            break;
+        if (arg == "-b" || arg == "--batch")
+            batch = true;
+        else if (arg == "--interactive")
+            batch = false;
+        else if (arg == "-h" || arg == "--help" || arg == "--version")
+            helpOrVersion = true;
+        if (arg == "-platform" || arg.startsWith("-platform="))
+            platformGiven = true;
+    }
+    if ((batch || helpOrVersion) && !platformGiven)
+        qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
 #ifdef Q_OS_MACOS
     app.setCursorFlashTime(0);
@@ -33,6 +70,8 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("disparPDF");
     app.setApplicationName(AboutForm::ProgramName);
     app.setWindowIcon(QIcon(":/icon.png"));
+    // Lets Wayland desktops find disparPDF.desktop, and so the icon
+    app.setDesktopFileName("disparPDF");
     QTextStream out(stdout);
     QStringList args = app.arguments().mid(1);
     QSettings settings;
@@ -48,10 +87,10 @@ int main(int argc, char *argv[])
     Status status ;
     bool seenCompareType = false;
     QStringList errors;
+    QStringList fileArguments;
 
-#ifdef  COMPARA_IS_CONSOLE
-    startupParameters.setIsBatch(true);
-#endif
+    if (console)
+        startupParameters.setIsBatch(true);
     for (const QString &arg : std::as_const(args)) {
         if (optionsOK && (arg == "--appearance" || arg == "-a")) {
             comparisonMode = CompareAppearance;
@@ -64,46 +103,110 @@ int main(int argc, char *argv[])
             seenCompareType = true ;
         } else if (optionsOK && arg.startsWith(LanguageOption))
             language = arg.mid(LanguageOption.length());
+        else if (optionsOK && arg == "--version") {
+            out << CommandName << " " << AboutForm::Version << "\n"
+                << "Built with Qt " << QT_VERSION_STR << " and Poppler "
+                << POPPLER_VERSION << "\n"
+                << "License GPLv2+: GNU GPL version 2 or later "
+                   "<https://gnu.org/licenses/gpl.html>\n";
+            return 0;
+        }
         else if (optionsOK && (arg == "--help" || arg == "-h")) {
-            out << "usage: disparPDF [options] [file1.pdf [file2.pdf]]\n\n"
-                "A program that compares two PDF files and shows "
-                "their differences.\n"
-                "\nThe files are optional and are normally set "
-                "through the user interface.\n\n"
-                "options:\n"
-                "--help        -h   show this usage text and terminate "
-                "(run the program without this option and press F1 for "
-                "online help)\n"
-                "--appearance  -a   set the initial comparison mode to "
-                "Appearance\n"
-                "--characters  -c   set the initial comparison mode to "
-                "Characters\n"
-                "--words       -w   set the initial comparison mode to "
-                "Words\n"
-                "--language=xx      set the program to use the given "
-                "translation language, e.g., en for English, cz for "
-                "Czech; English will be used if there is no translation "
-                "available\n"
-                "--debug=2          write the text fed to the sequence "
-                "matcher into temporary files (e.g., /tmp/page1.txt "
-                "etc.)\n"
-                "--debug=3          as --debug=3 but also includes "
-                "coordinates in y, x order\n"
-                "--batch -b activates the batch mode\n"
-                "result information returned in batch mode:\n"
-                "  --outType=0 prints only the return code\n"
-                "  --outType=1 prints the return code and a description\n"
-                "--pages=nn the number of pages to compare (default all)\n"
-                "--startPage1=nn the stating page number for file 1\n"
-                "--startPage2=nn the stating page number for file 2\n"
-                "--pdfdiff=path generates a pdf with differences \n"
-                "--xmlResult=path generates file with the comparison result in XML \n"
-                "--key=aKey a key to be recorded in the result file\n"
-                "--settings=file settings to override default parameters\n"
-                "--compareFonts compare the fonts\n"
-                "\nRun the program without the --help option and click "
-                "About to see copyright and license details\n"
-                ;
+            // GNU style, which help2man turns into the manual pages
+            if (console)
+                out << "Usage: " << CommandName << " [OPTION]... FILE1 FILE2\n"
+                    "Compare two PDF files without a window, and print the "
+                    "result code\n(see below).\n"
+                    "\n"
+                    "Options:\n"
+                    "  -a, --appearance       compare the appearance of the "
+                    "pages (the default)\n"
+                    "  -c, --characters       compare the text character by "
+                    "character\n"
+                    "  -w, --words            compare the text word by word\n";
+            else
+                out << "Usage: " << CommandName << " [OPTION]... [FILE1 [FILE2]]\n"
+                    "  or:  " << CommandName << " --batch [OPTION]... FILE1 FILE2\n"
+                    "  or:  disparPDFc [OPTION]... FILE1 FILE2\n"
+                    "Compare two PDF files and show their differences.\n"
+                    "\n"
+                    "The files are optional and are normally chosen in the "
+                    "window.  With --batch,\nthey are compared without a "
+                    "window, and the result code (see below) is\nprinted.\n"
+                    "\n"
+                    "Options:\n"
+                    "  -a, --appearance       compare the appearance of the "
+                    "pages (the default in\n"
+                    "                           batch mode)\n"
+                    "  -c, --characters       compare the text character by "
+                    "character\n"
+                    "  -w, --words            compare the text word by word "
+                    "(the default otherwise)\n";
+            out << "      --any-extension    accept files whose names do "
+                "not end in .pdf\n"
+                "      --language=LANG    use the given translation "
+                "language, e.g., en for\n"
+                "                           English, cz for Czech; "
+                "English is used if there is\n"
+                "                           no translation\n"
+                "      --debug=2          write the text fed to the "
+                "sequence matcher into\n"
+                "                           temporary files (e.g., "
+                "/tmp/page1.txt)\n"
+                "      --debug=3          as --debug=2, but also with "
+                "the coordinates, in y, x\n"
+                "                           order\n"
+                "  -h, --help             display this help and exit\n"
+                "      --version          output version information and "
+                "exit\n"
+                "\n"
+                "Batch mode options:\n";
+            if (console)
+                out << "      --interactive      show the window, as "
+                    "disparPDF does\n";
+            else
+                out << "  -b, --batch            compare without a window\n"
+                    "      --interactive      show the window (the default, "
+                    "except as disparPDFc)\n";
+            out << "      --outType=0        print only the result code "
+                "(the default)\n"
+                "      --outType=1        print the result code and a "
+                "description\n"
+                "      --pages=N          compare N pages (default all)\n"
+                "      --startPage1=N     start at page N of FILE1\n"
+                "      --startPage2=N     start at page N of FILE2\n"
+                "      --pdfdiff=FILE     save the pages that differ, "
+                "highlighted, to FILE\n"
+                "      --xmlResult=FILE   write the result, in XML, to "
+                "FILE\n"
+                "      --key=KEY          record KEY in the XML result\n"
+                "      --settings=FILE    read settings (zoom, margins, "
+                "tolerances, colors,\n"
+                "                           etc.) from FILE, in INI "
+                "format, instead of using\n"
+                "                           the defaults\n"
+                "      --compareFonts     also compare the fonts the "
+                "files use\n"
+                "\n"
+                "Result codes, printed in batch mode and also the exit "
+                "status (modulo 256):\n"
+                "   0  the files are the same\n"
+                "   1  the files differ\n"
+                "   2  the files have different numbers of pages\n"
+                "   3  a start page is beyond the end of its file\n"
+                "   4  a file has fewer pages than --pages asks for\n"
+                "   5  the same file was given twice\n"
+                "   6  the files use different fonts (with "
+                "--compareFonts)\n"
+                "  -1  a command line error\n"
+                "  -3, -4  FILE1 or FILE2 cannot be read\n"
+                "  -5  a page cannot be read\n"
+                "  -6, -7  the --pdfdiff or --xmlResult file cannot be "
+                "written\n";
+            if (!console)
+                out << "\n"
+                    "In the window, press F1 for the full documentation, and "
+                    "click About for the\ncopyright and license details.\n";
             return 0;
         }
         else if (optionsOK && (arg == "--debug" || arg == "--debug=1" ||
@@ -117,31 +220,42 @@ int main(int argc, char *argv[])
             optionsOK = false;
         } else if (optionsOK && startupParameters.parseArgument(arg, &status) ) {
             ; // empty statement
-        } else if (filename1.isEmpty() && arg.toLower().endsWith(".pdf")) {
+        } else if (optionsOK && arg.startsWith('-') && arg != "-") {
+            errors << arg ; // An unknown option
+        } else {
+            fileArguments << arg ;
+        }
+    }
+    // The first two arguments that are not options are the files to
+    // compare.  Their names must end in .pdf, unless --any-extension is
+    // given or, in the GUI, the Options dialog says otherwise.
+    const bool requirePdfExtension = !startupParameters.anyExtension() &&
+            (startupParameters.isBatch() ||
+             settings.value("RequirePdfExtension", true).toBool());
+    for (const QString &arg : std::as_const(fileArguments)) {
+        const bool acceptable = !requirePdfExtension ||
+                                arg.toLower().endsWith(".pdf");
+        if (acceptable && filename1.isEmpty()) {
             filename1 = arg;
             startupParameters.setFile1(filename1);
-        } else if (filename2.isEmpty() && arg.toLower().endsWith(".pdf")) {
+        } else if (acceptable && filename2.isEmpty()) {
             filename2 = arg;
             startupParameters.setFile2(filename2);
         } else {
             errors << arg ;
         }
     }
+    // The translators must outlive this block: a QTranslator uninstalls
+    // itself when destroyed
+    QTranslator qtTranslator;
+    QTranslator appTranslator;
     if(!startupParameters.isBatch()) {
-        QTranslator qtTranslator;
-        {
-            QString translationsPath =
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-                QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-#else
-                QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#endif
-            qtTranslator.load("qt_" + language, translationsPath);
-        }
-        app.installTranslator(&qtTranslator);
-        QTranslator appTranslator;
-        appTranslator.load("disparPDF_" + language, ":/");
-        app.installTranslator(&appTranslator);
+        QString translationsPath =
+            QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+        if (qtTranslator.load("qt_" + language, translationsPath))
+            app.installTranslator(&qtTranslator);
+        if (appTranslator.load("disparPDF_" + language, ":/"))
+            app.installTranslator(&appTranslator);
     }
 
     if( errors.count() > 0 ) {
@@ -171,7 +285,7 @@ int main(int argc, char *argv[])
         if( !startupParameters.validate(&status) ) {
             return status.returnOp(startupParameters.returnType(), &startupParameters);
         }
-        CommandLineManager manager(debug, comparisonMode, filename1, filename2,
+        CommandLineManager manager(debug, comparisonMode,
                 &startupParameters, &status );
         manager.batchOperation();
         return status.returnOp(startupParameters.returnType(), &startupParameters, manager.getCompare() );

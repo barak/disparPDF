@@ -22,12 +22,9 @@
 #include <QTabWidget>
 #include <QTextBrowser>
 
-const QString AboutForm::Version("1.0.6");
-#ifdef COMPARA_IS_CONSOLE
+// From project() in CMakeLists.txt
+const QString AboutForm::Version(DISPARPDF_VERSION);
 const QString AboutForm::ProgramName("disparPDF");
-#else
-const QString AboutForm::ProgramName("disparPDF");
-#endif
 
 AboutForm::AboutForm(QWidget *parent) : QDialog(parent)
 {

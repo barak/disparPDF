@@ -189,6 +189,61 @@ disparPDFc -b --outType=1 a.pdf b.pdf
 disparPDFc -b --xmlResult=result.xml a.pdf b.pdf
 ```
 
+`disparPDFc`は別のプログラムではなく，`disparPDF`へのシンボリックリンク
+（Windowsではそのコピー）です．この名前で起動するとバッチモードになるので
+`-b`は省略でき，ディスプレイも不要です．`disparPDF -b`でも同じです．
+`disparPDFc --interactive`では`disparPDF`と同様にウィンドウを表示します．
+
+## 設定
+
+GUIはユーザーごとに設定を保存します．macOSでは
+`~/Library/Preferences/com.disparpdf.disparPDF.plist`，LinuxとBSDでは
+`~/.config/disparPDF/disparPDF.conf`（INIファイル）です．
+
+`disparPDFc`はこのファイルを読まず，`--settings=FILE`で指定したINIファイルを
+読みます．既定値以外の条件でスクリプトから比較する場合はこれを使います：
+
+```sh
+disparPDFc -a --settings=mysettings.ini a.pdf b.pdf
+```
+
+以下のうち大半はGUIにも操作個所があります．`disparPDFc`向けのINIファイルを
+手で書けるように一覧にしてあります．最後の2つだけはGUIに操作個所がありません．
+
+### 比較
+
+| キー | 既定値 | GUI | 意味 |
+|---|---|---|---|
+| `InitialComparisonMode` | `2` | 比較モードの選択 | GUIの起動時モード．0=外観，1=文字，2=単語．バッチモードはこれを見ず，`-a`・`-c`・`-w`のいずれも指定しなければ外観比較になる |
+| `Margins/Exclude` | `false` | マージンを除外 | 下記マージンの外側を比較対象から外す |
+| `Margins/Top`・`/Bottom`・`/Left`・`/Right` | `0` | マージンのドック | マージンの大きさ（ポイント） |
+| `Zoning/Enable` | `false` | ゾーニング | 比較前にテキストをゾーンにまとめる |
+| `Columns` | `1` | 段数 | ページの段数．ゾーニングの精度が上がる |
+| `Tolerance/R` | `8` | Tolerance/R | 同一ゾーンとみなす単語矩形間の最大距離（4〜144） |
+| `Tolerance/Y` | `10` | Tolerance/Y | ゾーニング時にテキストの*y*座標を丸める単位（0〜32） |
+| `RequirePdfExtension` | `true` | オプション ▸ 比較するファイル | コマンドラインで名前が`*.pdf`のファイルだけを受け付け，ファイルダイアログにもそれだけを表示する．バッチモードはこれを見ず，`--any-extension`を指定しない限り常に`*.pdf`が必要 |
+
+### 表示とハイライト
+
+| キー | 既定値 | GUI | 意味 |
+|---|---|---|---|
+| `Zoom` | `100` | ズーム | 表示倍率（パーセント） |
+| `Outline`・`Fill` | — | オプション ▸ ハイライト | ハイライトのペンとブラシ．Qtの値をシリアライズしたものなので，手で書かずダイアログから設定する |
+| `Opacity` | `13` | オプション ▸ 塗りの不透明度 | 塗りの不透明度（パーセント） |
+| `RuleWidth` | `1.5` | オプション ▸ 線幅 | ハイライトの輪郭線の太さ |
+| `SquareSize` | `10` | オプション ▸ 四角のサイズ | ハイライトの四角の大きさ（ピクセル） |
+| `CombineTextHighlighting` | `true` | オプション ▸ ハイライトを結合 | テキストモードで隣接するハイライトをまとめる |
+| `Overlap` | `5` | — | ハイライト矩形を結合する重なりの許容量 |
+| `ShowToolTips` | `true` | オプション ▸ ツールチップを表示 | メインウィンドウでツールチップを表示する |
+| `CacheSizeMB` | `25` | オプション ▸ キャッシュサイズ | レンダリング済みページのキャッシュ上限（MB） |
+
+### GUIに操作個所がない設定
+
+| キー | 既定値 | 意味 |
+|---|---|---|
+| `CompareThreads` | `0` | 比較に使うワーカースレッド数の上限．`0`はコア数分．各ワーカーが2つの文書を個別に開くため，値を下げるとピークメモリも下がる．1536ページの外観比較を8コアで実行した場合，最大RSSは`0`で223MB，`4`で152MB，`1`で89MB（並列化前は74MB）．所要時間は1.4秒に対し2.8秒 |
+| `compositionMode` | `-1` | 外観比較の差異を描画する`QPainter::CompositionMode`の値．`-1`で通常のハイライトになる．GUIのハイライトモード選択に相当する．22=Difference，23=Exclusion，26=Src Xor Dest，29=Not Src Xor Dest |
+
 ## ライセンス
 
 GPL-2.0-or-later
