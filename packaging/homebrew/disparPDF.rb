@@ -91,10 +91,11 @@ class Disparpdf < Formula
     assert_predicate prefix/"disparPDF.app", :exist?
     assert_predicate bin/"disparPDFc", :exist?
     assert_match "disparPDFc", shell_output("#{bin}/disparPDFc --version")
-    # cmake --installが置くもの
+    # cmake --installが置くもの．補完はCMAKE_INSTALL_DATADIR配下に入るため，
+    # etc/bash_completion.dを指すbash_completionヘルパーでは見つからない
     assert_predicate man1/"disparPDF.1", :exist?
-    assert_predicate bash_completion/"disparPDFc", :exist?
-    assert_predicate zsh_completion/"_disparPDF", :exist?
+    assert_predicate share/"bash-completion/completions/disparPDFc", :exist?
+    assert_predicate share/"zsh/site-functions/_disparPDF", :exist?
     # --helpはウィンドウを開かずに終了コード0で返る
     assert_match "Usage: disparPDFc", shell_output("#{bin}/disparPDFc --help")
   end
