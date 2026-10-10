@@ -2,17 +2,18 @@ class Disparpdf < Formula
   desc "PDF comparison tool — compares text or visual appearance of two PDF files"
   homepage "https://github.com/yuw/disparPDF"
 
-  # リリースタグを打った後は以下の url/sha256 をタグのものに更新する:
+  # リリースタグを打った後は以下のurl/sha256をタグのものに更新する:
   #   url "https://github.com/yuw/disparPDF/archive/refs/tags/v1.0.tar.gz"
-  #   sha256 "<brew fetch でのhash>"
+  #   sha256 "<brew fetchでのhash>"
   url "https://github.com/yuw/disparPDF/archive/refs/heads/master.tar.gz"
   version "1.0"
   sha256 :no_check
 
   license any_of: ["GPL-2.0-or-later"]
 
-  depends_on "cmake"   => :build
-  depends_on "pkgconf" => :build
+  depends_on "cmake"     => :build
+  depends_on "help2man"  => :build
+  depends_on "pkgconf"   => :build
   depends_on "qt@6"
   depends_on "yuw/disparPDF/poppler-qt6"
 
@@ -27,16 +28,16 @@ class Disparpdf < Formula
 
     system "cmake", "--build", "build", "-j#{ENV.make_jobs}"
 
-    # GUI アプリ
-    prefix.install "build/disparPDF.app"
-
-    # CLI: .app 内の本体へのシンボリックリンク。disparPDFc という名前で
-    # 起動すると常にバッチモードになる（main.cpp）。open を経由しないので
+    # .app本体，disparPDFc（.app内の本体への相対シンボリックリンク），
+    # manページ，シェル補完，docをまとめて配置する．disparPDFcという名前で
+    # 起動すると常にバッチモードになる（main.cpp）．openを経由しないので
     # 標準出力と終了ステータスがそのまま返る
-    bin.install_symlink prefix/"disparPDF.app/Contents/MacOS/disparPDF" => "disparPDFc"
+    system "cmake", "--install", "build"
 
-    # GUI を bin からも呼び出せるようにラッパースクリプトを作成
-    # 引数を絶対パスに変換してから渡す（相対パスだと cannot load エラーになる）
+    # GUIをbinからも呼び出せるようにラッパースクリプトを作成する．
+    # cmake --installはmacOSでは.appバンドルとCLIのリンクだけを置き，
+    # bin/disparPDFは作らないのでここで補う．
+    # 引数を絶対パスに変換してから渡す（相対パスだとcannot loadエラーになる）
     (bin/"disparPDF").write <<~SHELL
       #!/bin/sh
       args=""
@@ -52,15 +53,15 @@ class Disparpdf < Formula
   end
 
   def post_install
-    # install_name_tool による変更後に再署名（macOS 26以降で必須）
+    # install_name_toolによる変更後に再署名（macOS 26以降で必須）
     system "codesign", "--force", "--sign", "-",
            "#{prefix}/disparPDF.app/Contents/MacOS/disparPDF"
   end
 
-  # 以前はここで /Applications へコピーしていたが、macOS 13 以降の TCC
-  # (App Management) により、自分がインストールしたのではない /Applications 内の
-  # .app バンドルは brew から書き換えられない ("Operation not permitted")。
-  # 無言でスキップされ GUI だけ旧バージョンのまま残るため、手順を caveats に移した。
+  # 以前はここで/Applicationsへコピーしていたが，macOS 13以降のTCC
+  # (App Management)により，自分がインストールしたのではない/Applications内の
+  # .appバンドルはbrewから書き換えられない（"Operation not permitted"）．
+  # 無言でスキップされGUIだけ旧バージョンのまま残るため，手順をcaveatsに移した．
   def caveats
     <<~EOS
       disparPDF.app has been installed to:
@@ -80,6 +81,9 @@ class Disparpdf < Formula
       CLI commands available:
         disparPDF   — launch GUI with optional file arguments
         disparPDFc  — batch/command line mode
+
+      "man disparPDF" covers both, and shell completions for bash and zsh
+      are installed.
     EOS
   end
 
@@ -87,5 +91,11 @@ class Disparpdf < Formula
     assert_predicate prefix/"disparPDF.app", :exist?
     assert_predicate bin/"disparPDFc", :exist?
     assert_match "disparPDFc", shell_output("#{bin}/disparPDFc --version")
+    # cmake --installが置くもの
+    assert_predicate man1/"disparPDF.1", :exist?
+    assert_predicate bash_completion/"disparPDFc", :exist?
+    assert_predicate zsh_completion/"_disparPDF", :exist?
+    # --helpはウィンドウを開かずに終了コード0で返る
+    assert_match "Usage: disparPDFc", shell_output("#{bin}/disparPDFc --help")
   end
 end
